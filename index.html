@@ -2104,19 +2104,7 @@
     const TEACHER_PASSCODE = 'walid2026';
     const LOCAL_REGISTRY_KEY = 'ict_mr_walid_students_v1';
 
-    const DEFAULT_STUDENTS = {
-      'student1': {
-        username: 'student1',
-        fullName: 'طالب تجريبي (نموذج)',
-        passwordHash: simpleHash('1234'),
-        completedLessons: ['1-1'],
-        masteredCards: [1, 2],
-        solvedPractice: ['g1'],
-        examScore: null,
-        examCorrectCount: null,
-        updatedAt: Date.now()
-      }
-    };
+    const DEFAULT_STUDENTS = {};
 
     function loadLocalRegistry() {
       try {
@@ -2124,6 +2112,7 @@
         if (raw) {
           const parsed = JSON.parse(raw);
           if (parsed && typeof parsed === 'object') {
+            delete parsed.student1;
             return { ...DEFAULT_STUDENTS, ...parsed };
           }
         }
@@ -2197,6 +2186,10 @@
           (snapshot) => {
             snapshot.forEach((docSnap) => {
               const data = docSnap.data();
+              if (docSnap.id === 'student1') {
+                try { cs.deleteDoc(cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'students', 'student1')); } catch (e) {}
+                return;
+              }
               if (data && data.username) {
                 studentsRegistry[docSnap.id] = data;
               }
@@ -2381,7 +2374,7 @@
       let student = studentsRegistry[key];
 
       const cs = window.cloudStore;
-      if (!student && cs && cs.ready && cs.db && cs.user) {
+      if (!student && key !== 'student1' && cs && cs.ready && cs.db && cs.user) {
         try {
           const docRef = cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'students', key);
           const snap = await cs.getDoc(docRef);
@@ -2636,11 +2629,9 @@
                 <span>الاختبار النهائي: <strong>${hasExam ? `${correctCnt}/20 (${st.examScore}%)` : 'لم يختبر بعد'}</strong></span>
               </div>
             </div>
-            ${st.username !== 'student1' ? `
-              <button onclick="deleteStudentAccount('${escapeHtml(st.username)}')" class="px-3 py-1.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-extrabold shrink-0 transition">
+            <button onclick="deleteStudentAccount('${escapeHtml(st.username)}')" class="px-3 py-1.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-extrabold shrink-0 transition">
                 حذف الحساب
               </button>
-            ` : `<span class="text-[11px] font-bold text-slate-400">حساب تجريبي</span>`}
           </div>
         `;
       }).join('');
