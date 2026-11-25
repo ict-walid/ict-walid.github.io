@@ -40,14 +40,14 @@
   <!-- ===================================================================== -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     /**
      * [مكان الربط المخصص للمعلم - Mr/Walid Mahmoud]
      * عند رفع المنصة على استضافة مجانية خارجية (مثل Netlify أو GitHub Pages)،
      * إذا أردت أن تُحفظ حسابات ودرجات الطلاب عن بُعد وتظهر في لوحة تحكم المعلم:
-     * 1. أنشئ مشروعًا مجانيًا على console.firebase.google.com وفعّل (Anonymous Auth) و (Firestore).
+     * 1. أنشئ مشروعًا مجانيًا على console.firebase.google.com وفعّل (Email/Password Auth) و (Firestore).
      * 2. الصق بيانات التهيئة (firebaseConfig) داخل الكائن التالي مكان القيم الفارغة:
      */
     const CUSTOM_FIREBASE_CONFIG = {
@@ -71,7 +71,14 @@
       setDoc,
       deleteDoc,
       onSnapshot,
-      collection
+      collection,
+      firebaseConfig: null,
+      initializeApp,
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged
     };
 
     async function initCloudServices() {
@@ -94,18 +101,12 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // المصادقة أولًا قبل أي عملية قراءة أو كتابة في قاعدة البيانات
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-
+        // لا تسجيل دخول تلقائي: كل طالب والمعلم يدخل بحسابه الخاص عبر Firebase Auth
         window.cloudStore.db = db;
         window.cloudStore.auth = auth;
-        window.cloudStore.user = auth.currentUser;
-        window.cloudStore.ready = Boolean(auth.currentUser);
-        window.cloudStore.mode = window.cloudStore.ready ? 'cloud' : 'local';
+        window.cloudStore.firebaseConfig = activeConfig;
+        window.cloudStore.ready = true;
+        window.cloudStore.mode = 'cloud';
 
         if (typeof window.onCloudReady === 'function') {
           window.onCloudReady();
@@ -470,7 +471,7 @@
               <input                 type="password"
                 id="teacher-passcode"
                 required
-                placeholder="أدخل رمز دخول المعلم"
+                placeholder="أدخل كلمة مرور المعلم"
                 class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-amber-600"
               >
               <button type="button" onclick="togglePasswordVisibility('teacher-passcode')" class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 hover:text-amber-600">
@@ -2101,7 +2102,11 @@
     /*************************************************************************
      * 5. حالة التطبيق (Application State) وإدارة حسابات الطلاب والمعلم
      *************************************************************************/
-    const TEACHER_PASSCODE = 'walid2026';
+    const TEACHER_EMAIL = 'teacher@ict-walid.app';
+    const STUDENT_EMAIL_DOMAIN = '@ict-walid.app';
+    function studentEmailFor(key) {
+      return key + STUDENT_EMAIL_DOMAIN;
+    }
     const LOCAL_REGISTRY_KEY = 'ict_mr_walid_students_v1';
 
     const DEFAULT_STUDENTS = {};
@@ -2149,16 +2154,6 @@
       activeSim: 'sim1'
     };
 
-    function simpleHash(str) {
-      let hash = 5381;
-      const clean = String(str || '');
-      for (let i = 0; i < clean.length; i++) {
-        hash = ((hash << 5) + hash) + clean.charCodeAt(i);
-        hash = hash & hash;
-      }
-      return 'h_' + Math.abs(hash).toString(16);
-    }
-
     function normalizeUsername(raw) {
       return String(raw || '').trim().toLowerCase().replace(/[^a-z0-9_\u0600-\u06FF-]/g, '');
     }
@@ -2172,24 +2167,19 @@
         .replace(/'/g, '&#039;');
     }
 
-    // الاستماع الفوري لتحديثات الطلاب من السحابة عند جاهزية المصادقة
-    window.onCloudReady = function () {
+    // الاستماع الفوري لتحديثات الطلاب من السحابة (للمعلم فقط بعد تسجيل دخوله)
+    let teacherUnsubscribe = null;
+    function startTeacherListener() {
       const cs = window.cloudStore;
-      if (appState.isTeacherMode) {
-        updateCloudStatusBanner();
-      }
-      if (!cs || !cs.ready || !cs.db || !cs.user) return;
+      if (!cs || !cs.ready || !cs.db || teacherUnsubscribe) return;
       try {
         const colRef = cs.collection(cs.db, 'artifacts', cs.appId, 'public', 'data', 'students');
-        cs.onSnapshot(
+        teacherUnsubscribe = cs.onSnapshot(
           colRef,
           (snapshot) => {
+            studentsRegistry = {};
             snapshot.forEach((docSnap) => {
               const data = docSnap.data();
-              if (docSnap.id === 'student1') {
-                try { cs.deleteDoc(cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'students', 'student1')); } catch (e) {}
-                return;
-              }
               if (data && data.username) {
                 studentsRegistry[docSnap.id] = data;
               }
@@ -2204,6 +2194,48 @@
           }
         );
       } catch (e) {}
+    }
+
+    function applyTeacherSession() {
+      appState.currentUser = null;
+      appState.isTeacherMode = true;
+      appState.studentName = 'Mr/Walid Mahmoud';
+      updateStudentNameUI();
+      updateAuthLayoutVisibility();
+      startTeacherListener();
+    }
+
+    // استعادة الجلسة بعد إعادة تحميل الصفحة إن كان الحساب ما زال مسجلًا في Firebase Auth
+    window.onCloudReady = function () {
+      const cs = window.cloudStore;
+      if (appState.isTeacherMode) {
+        updateCloudStatusBanner();
+      }
+      if (!cs || !cs.ready || !cs.auth) return;
+      try {
+        cs.onAuthStateChanged(cs.auth, async (user) => {
+          try {
+            if (!user) return;
+            if (appState.currentUser || appState.isTeacherMode) return;
+            const email = String(user.email || '').toLowerCase();
+            if (email === TEACHER_EMAIL) {
+              applyTeacherSession();
+              return;
+            }
+            if (!email.endsWith(STUDENT_EMAIL_DOMAIN)) return;
+            const key = normalizeUsername(email.slice(0, -STUDENT_EMAIL_DOMAIN.length));
+            if (!key) return;
+            const docRef = cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'students', key);
+            const snap = await cs.getDoc(docRef);
+            if (snap.exists()) {
+              const student = snap.data();
+              studentsRegistry[key] = student;
+              saveLocalRegistry(studentsRegistry);
+              applyStudentSession(student);
+            }
+          } catch (e) {}
+        });
+      } catch (e) {}
     };
 
     async function persistStudentRecord(record) {
@@ -2214,7 +2246,7 @@
       saveLocalRegistry(studentsRegistry);
 
       const cs = window.cloudStore;
-      if (cs && cs.ready && cs.db && cs.user) {
+      if (cs && cs.ready && cs.db && cs.auth && cs.auth.currentUser && record.username !== 'mr_walid_preview') {
         try {
           const docRef = cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'students', key);
           await cs.setDoc(docRef, studentsRegistry[key]);
@@ -2371,32 +2403,43 @@
         return;
       }
 
-      let student = studentsRegistry[key];
-
       const cs = window.cloudStore;
-      if (!student && key !== 'student1' && cs && cs.ready && cs.db && cs.user) {
-        try {
-          const docRef = cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'students', key);
-          const snap = await cs.getDoc(docRef);
-          if (snap.exists()) {
-            student = snap.data();
-            studentsRegistry[key] = student;
-            saveLocalRegistry(studentsRegistry);
-          }
-        } catch (err) {}
-      }
-
-      if (!student) {
-        showAuthFeedback('اسم المستخدم غير مسجل. يمكنك الضغط على تبويب «حساب طالب جديد» لإنشاء حسابك في ثوانٍ.');
+      if (!cs || !cs.ready || !cs.auth) {
+        showAuthFeedback('تعذر الاتصال بالسحابة. تحقق من الإنترنت وحاول مرة أخرى.');
         return;
       }
 
-      if (student.passwordHash !== simpleHash(password)) {
-        showAuthFeedback('كلمة المرور غير صحيحة. تأكد منها وحاول مرة أخرى.');
+      try {
+        await cs.signInWithEmailAndPassword(cs.auth, studentEmailFor(key), password);
+      } catch (err) {
+        const code = err && err.code ? err.code : '';
+        if (code === 'auth/user-not-found' || code === 'auth/invalid-email') {
+          showAuthFeedback('اسم المستخدم غير مسجل. يمكنك الضغط على تبويب «حساب طالب جديد» لإنشاء حسابك في ثوانٍ.');
+        } else if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+          showAuthFeedback('كلمة المرور غير صحيحة. تأكد منها وحاول مرة أخرى.');
+        } else if (code === 'auth/too-many-requests') {
+          showAuthFeedback('محاولات دخول كثيرة متتالية. انتظر دقيقة ثم حاول مرة أخرى.');
+        } else {
+          showAuthFeedback('تعذر تسجيل الدخول الآن. تحقق من الإنترنت وحاول مرة أخرى.');
+        }
         return;
       }
 
-      applyStudentSession(student);
+      try {
+        const docRef = cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'students', key);
+        const snap = await cs.getDoc(docRef);
+        if (!snap.exists()) {
+          showAuthFeedback('اسم المستخدم غير مسجل. يمكنك الضغط على تبويب «حساب طالب جديد» لإنشاء حسابك في ثوانٍ.');
+          try { await cs.signOut(cs.auth); } catch (e) {}
+          return;
+        }
+        const student = snap.data();
+        studentsRegistry[key] = student;
+        saveLocalRegistry(studentsRegistry);
+        applyStudentSession(student);
+      } catch (err) {
+        showAuthFeedback('تعذر تحميل بيانات الطالب. حاول مرة أخرى.');
+      }
     }
 
     const PASSWORD_RULE_MSG = 'كلمة المرور يجب ألا تقل عن 8 أحرف وتحتوي على حرف إنجليزي كبير (A-Z) وحرف إنجليزي صغير (a-z) ورقم (0-9) ورمز واحد على الأقل (مثل @ # $ !).';
@@ -2417,8 +2460,8 @@
         showAuthFeedback('يرجى كتابة الاسم الثلاثي للطالب بشكل واضح ليظهر في شهادة التقدير.');
         return;
       }
-      if (key.length < 3) {
-        showAuthFeedback('يجب أن يتكون اسم المستخدم أو الكود من 3 أحرف أو أرقام على الأقل.');
+      if (!/^[a-z0-9_-]{3,20}$/.test(key)) {
+        showAuthFeedback('اسم المستخدم يجب أن يكون من 3 إلى 20 حرفًا إنجليزيًا صغيرًا أو رقمًا بدون مسافات (a-z و 0-9 و - و _).');
         return;
       }
       if (!isStrongPassword(password)) {
@@ -2427,25 +2470,28 @@
       }
 
       const cs = window.cloudStore;
-      if (cs && cs.ready && cs.db && cs.user) {
-        try {
-          const docRef = cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'students', key);
-          const snap = await cs.getDoc(docRef);
-          if (snap.exists()) {
-            studentsRegistry[key] = snap.data();
-          }
-        } catch (err) {}
+      if (!cs || !cs.ready || !cs.auth) {
+        showAuthFeedback('تعذر الاتصال بالسحابة. تحقق من الإنترنت وحاول مرة أخرى.');
+        return;
       }
 
-      if (studentsRegistry[key]) {
-        showAuthFeedback('اسم المستخدم هذا مسجل لطالب آخر بالفعل، يرجى اختيار كود أو اسم مستخدم مختلف.');
+      try {
+        await cs.createUserWithEmailAndPassword(cs.auth, studentEmailFor(key), password);
+      } catch (err) {
+        const code = err && err.code ? err.code : '';
+        if (code === 'auth/email-already-in-use') {
+          showAuthFeedback('اسم المستخدم هذا مسجل لطالب آخر بالفعل، يرجى اختيار كود أو اسم مستخدم مختلف.');
+        } else if (code === 'auth/weak-password') {
+          showAuthFeedback(PASSWORD_RULE_MSG);
+        } else {
+          showAuthFeedback('تعذر إنشاء الحساب الآن. تحقق من الإنترنت وحاول مرة أخرى.');
+        }
         return;
       }
 
       const newStudent = {
         username: key,
         fullName: fullName,
-        passwordHash: simpleHash(password),
         completedLessons: [],
         masteredCards: [],
         solvedPractice: [],
@@ -2454,25 +2500,42 @@
         updatedAt: Date.now()
       };
 
-      await persistStudentRecord(newStudent);
+      try {
+        const docRef = cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'students', key);
+        await cs.setDoc(docRef, newStudent);
+      } catch (err) {
+        try { if (cs.auth.currentUser) await cs.auth.currentUser.delete(); } catch (e) {}
+        showAuthFeedback('تعذر حفظ بيانات الطالب. حاول مرة أخرى.');
+        return;
+      }
+
+      studentsRegistry[key] = newStudent;
+      saveLocalRegistry(studentsRegistry);
       applyStudentSession(newStudent);
     }
 
     
 
-    function handleTeacherLogin(e) {
+    async function handleTeacherLogin(e) {
       e.preventDefault();
       hideAuthFeedback();
       const pass = (document.getElementById('teacher-passcode').value || '').trim();
-      if (pass !== TEACHER_PASSCODE) {
-        showAuthFeedback('رمز دخول المعلم غير صحيح. الرمز الافتراضي للمستر هو: walid2026');
+      const cs = window.cloudStore;
+      if (!pass) {
+        showAuthFeedback('يرجى إدخال كلمة مرور المعلم.');
         return;
       }
-      appState.currentUser = null;
-      appState.isTeacherMode = true;
-      appState.studentName = 'Mr/Walid Mahmoud';
-      updateStudentNameUI();
-      updateAuthLayoutVisibility();
+      if (!cs || !cs.ready || !cs.auth) {
+        showAuthFeedback('تعذر الاتصال بالسحابة. تحقق من الإنترنت وحاول مرة أخرى.');
+        return;
+      }
+      try {
+        await cs.signInWithEmailAndPassword(cs.auth, TEACHER_EMAIL, pass);
+      } catch (err) {
+        showAuthFeedback('كلمة مرور المعلم غير صحيحة.');
+        return;
+      }
+      applyTeacherSession();
     }
 
     function enterStudentPreviewFromTeacher() {
@@ -2480,7 +2543,6 @@
       applyStudentSession({
         username: 'mr_walid_preview',
         fullName: 'Mr/Walid Mahmoud (معاينة المعلم)',
-        passwordHash: simpleHash(TEACHER_PASSCODE),
         completedLessons: [],
         masteredCards: [],
         solvedPractice: [],
@@ -2491,6 +2553,9 @@
     }
 
     function logoutUser() {
+      const cs = window.cloudStore;
+      if (cs && cs.auth) { try { cs.signOut(cs.auth); } catch (e) {} }
+      if (teacherUnsubscribe) { try { teacherUnsubscribe(); } catch (e) {} teacherUnsubscribe = null; }
       appState.currentUser = null;
       appState.isTeacherMode = false;
       appState.studentName = '';
@@ -2548,10 +2613,17 @@
         return;
       }
 
+      const cs = window.cloudStore;
+      if (!cs || !cs.ready || !cs.auth) {
+        fb.textContent = 'تعذر الاتصال بالسحابة. تحقق من الإنترنت وحاول مرة أخرى.';
+        fb.className = 'rounded-xl p-3 text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200';
+        fb.classList.remove('hidden');
+        return;
+      }
+
       const record = {
         username: key,
         fullName,
-        passwordHash: simpleHash(password),
         completedLessons: [],
         masteredCards: [],
         solvedPractice: [],
@@ -2560,7 +2632,22 @@
         updatedAt: Date.now()
       };
 
-      await persistStudentRecord(record);
+      try {
+        const secondaryApp = cs.initializeApp(cs.firebaseConfig, 'teacher-admin-' + Date.now());
+        const secondaryAuth = cs.getAuth(secondaryApp);
+        await cs.createUserWithEmailAndPassword(secondaryAuth, studentEmailFor(key), password);
+        await cs.signOut(secondaryAuth);
+        const docRef = cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'students', key);
+        await cs.setDoc(docRef, record);
+      } catch (err) {
+        const code = err && err.code ? err.code : '';
+        fb.textContent = code === 'auth/email-already-in-use'
+          ? 'هذا الكود / اسم المستخدم مستخدم بالفعل لطالب آخر.'
+          : 'تعذر إنشاء الحساب. تحقق من الإنترنت وحاول مرة أخرى.';
+        fb.className = 'rounded-xl p-3 text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200';
+        fb.classList.remove('hidden');
+        return;
+      }
       document.getElementById('td-new-fullname').value = '';
       document.getElementById('td-new-username').value = '';
       document.getElementById('td-new-password').value = '';
@@ -2575,7 +2662,7 @@
       delete studentsRegistry[usernameKey];
       saveLocalRegistry(studentsRegistry);
       const cs = window.cloudStore;
-      if (cs && cs.ready && cs.db && cs.user) {
+      if (cs && cs.ready && cs.db && cs.auth && cs.auth.currentUser) {
         try {
           const docRef = cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'students', usernameKey);
           await cs.deleteDoc(docRef);
