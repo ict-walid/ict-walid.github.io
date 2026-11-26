@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" >
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" >
+  <title>ICT is good with Mr/Walid | منهج البرمجة والذكاء الاصطناعي للصف الثاني الثانوي</title>
+  
+  <!-- استيراد خط Cairo العربي المريح للعين وخط Fira Code للمصطلحات التقنية -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <!-- مكتبة Tailwind CSS للتصميم المتجاوب -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    // الوضع الليلي هو الافتراضي؛ اختيار المستخدم محفوظ على الجهاز
+    (function(){try{if(localStorage.getItem('ict-theme')!=='light'){document.documentElement.classList.add('dark');}}catch(e){document.documentElement.classList.add('dark');}})();
+  </script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Cairo', 'sans-serif'],
+            mono: ['Fira Code', 'monospace'],
+          },
+          colors: {
+            moe: {
+              blue: '#1E3A8A',
+              royal: '#2563EB',
+              teal: '#0D9488',
+              amber: '#D97706',
+              light: '#F8FAFC',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- ===================================================================== -->
+  <!-- مكان الربط السحابي الخارجي (للاستضافة المجانية: Netlify / GitHub Pages) -->
+  <!-- ===================================================================== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, writeBatch, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    /**
+     * [مكان الربط المخصص للمعلم - Mr/Walid Mahmoud]
+     * عند رفع المنصة على استضافة مجانية خارجية (مثل Netlify أو GitHub Pages)،
+     * إذا أردت أن تُحفظ حسابات ودرجات الطلاب عن بُعد وتظهر في لوحة تحكم المعلم:
+     * 1. أنشئ مشروعًا مجانيًا على console.firebase.google.com وفعّل (Email/Password Auth) و (Firestore).
+     * 2. الصق بيانات التهيئة (firebaseConfig) داخل الكائن التالي مكان القيم الفارغة:
+     */
+    const CUSTOM_FIREBASE_CONFIG = {
+      apiKey: "AIzaSyCWY9GlGjJ60fdpAYo7waUn5iORfR41t00",
+      authDomain: "ict-walid.firebaseapp.com",
+      projectId: "ict-walid",
+      storageBucket: "ict-walid.firebasestorage.app",
+      messagingSenderId: "783826795702",
+      appId: "1:783826795702:web:4831b8394d623b1c06fa17"
+    };
+
+    window.cloudStore = {
+      ready: false,
+      mode: 'local', // 'cloud' عند تفعيل الربط السحابي أو 'local' للحفظ التلقائي المباشر
+      db: null,
+      auth: null,
+      user: null,
+      appId: typeof __app_id !== 'undefined' ? __app_id : 'ict-mr-walid-app',
+      doc,
+      getDoc,
+      setDoc,
+      deleteDoc,
+      writeBatch,
+      updateDoc,
+      increment,
+      onSnapshot,
+      collection,
+      firebaseConfig: null,
+      initializeApp,
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      signOut,
+      onAuthStateChanged,
+      sendPasswordResetEmail
+    };
+
+    async function initCloudServices() {
+      try {
+        let activeConfig = null;
+
+        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+          activeConfig = JSON.parse(__firebase_config);
+        } else if (CUSTOM_FIREBASE_CONFIG && CUSTOM_FIREBASE_CONFIG.apiKey && CUSTOM_FIREBASE_CONFIG.projectId) {
+          activeConfig = CUSTOM_FIREBASE_CONFIG;
+        }
+
+        if (!activeConfig) {
+          window.cloudStore.mode = 'local';
+          if (typeof window.onCloudReady === 'function') window.onCloudReady();
+          return;
+        }
+
+        const app = initializeApp(activeConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // لا تسجيل دخول تلقائي: كل طالب والمعلم يدخل بحسابه الخاص عبر Firebase Auth
+        window.cloudStore.db = db;
+        window.cloudStore.auth = auth;
+        window.cloudStore.firebaseConfig = activeConfig;
+        window.cloudStore.ready = true;
+        window.cloudStore.mode = 'cloud';
+
+        if (typeof window.onCloudReady === 'function') {
+          window.onCloudReady();
+        }
+      } catch (err) {
+        window.cloudStore.mode = 'local';
+        if (typeof window.onCloudReady === 'function') {
+          window.onCloudReady();
+        }
+      }
+    }
+
+    initCloudServices();
+  </script>
+
+  <style>
+    /* تنسيقات مخصصة للحركات السلسة وبطاقات المراجعة ثلاثية الأبعاد */
+    body {
+      font-family: 'Cairo', sans-serif;
+      scroll-behavior: smooth;
+    }
+
+    .perspective-1000 {
+      perspective: 1000px;
+    }
+
+    .transform-style-3d {
+      transform-style: preserve-3d;
+      transition: transform 0.65s cubic-bezier(0.4, 0.2, 0.2, 1);
+    }
+
+    .backface-hidden {
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+
+    .rotate-y-180 {
+      transform: rotateY(180deg);
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    @keyframes fadeSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    .animate-fade-up {
+      animation: fadeSlideUp 0.35s ease-out forwards;
+    }
+
+    /* إصلاح عرض الهاتف: شريط تنقل الشاشات الكبيرة لا يظهر أبدًا على الهاتف، حتى عند تسجيل الدخول */
+    #desktop-main-nav {
+      display: none;
+    }
+    @media (min-width: 1024px) {
+      #desktop-main-nav.nav-visible {
+        display: flex;
+      }
+    }
+
+    /* منع أي تجاوز أفقي لعرض الصفحة على الهواتف دون كسر التثبيت (sticky) */
+    html, body {
+      overflow-x: clip;
+    }
+
+    /* تنسيقات الطباعة الاحترافية لشهادة التقدير فقط دون عناصر الموقع */
+    @media print {
+      @page {
+        size: A4 landscape;
+        margin: 10mm;
+      }
+      body {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      header,
+      footer,
+      #name-modal,
+      .no-print {
+        display: none !important;
+      }
+      main {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      #printable-certificate-area {
+        display: block !important;
+        width: 100% !important;
+        margin: 0 auto !important;
+        box-shadow: none !important;
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+<meta name="description" content="منصة مراجعة للصف الثاني الثانوي مع المهندس وليد محمود: شرح فصول منهج البرمجة والذكاء الاصطناعي (ICT)، بطاقات مراجعة، أسئلة متدرجة، واختبار نهائي وشهادة تقدير للطلاب.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://ict-walid.github.io/">
+<meta property="og:title" content="ICT is good with Mr/Walid | منهج البرمجة والذكاء الاصطناعي للصف الثاني الثانوي">
+<meta property="og:description" content="منصة مراجعة للصف الثاني الثانوي مع المهندس وليد محمود: شرح فصول منهج البرمجة والذكاء الاصطناعي (ICT)، بطاقات مراجعة، أسئلة متدرجة، واختبار نهائي وشهادة تقدير للطلاب.">
+<meta property="og:url" content="https://ict-walid.github.io/">
+<meta property="og:type" content="website">
+<meta property="og:locale" content="ar_EG">
+<meta name="twitter:card" content="summary">
+<meta name="google-site-verification" content="LH4kzrbUz6Dcr8qInmp9eNEtHAbNjONqse6Mx5pq5Uo" />
+<meta name="google-site-verification" content="tmIBBrUbasUVdeVN_NWE2TKWvPQPu37c-pGboEiQ9So" />
+<meta name="google-site-verification" content="FZVGt8T_epuSc9iHNmhau3iH2qR_u9-DcfjzLAkWC0E">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"ICT is good with Mr/Walid","url":"https://ict-walid.github.io/","inLanguage":"ar","description":"منصة مراجعة للصف الثاني الثانوي مع المهندس وليد محمود: شرح فصول منهج البرمجة والذكاء الاصطناعي (ICT)، بطاقات مراجعة، أسئلة متدرجة، واختبار نهائي وشهادة تقدير للطلاب."}</script>
+</head>
+<body class="bg-slate-50 text-slate-800 dark:bg-slate-900 dark:text-slate-100 transition-colors duration-300 min-h-screen flex flex-col">
+
+  <!-- ===================================================================== -->
+  <!-- نافذة تعديل اسم الطالب -->
+  <!-- ===================================================================== -->
+  <div id="name-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-7 max-w-md w-full border border-slate-200 dark:border-slate-700 shadow-2xl space-y-4 animate-fade-up">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg sm:text-xl font-extrabold text-blue-950 dark:text-white">تعديل الاسم الظاهر في الشهادة 🎓</h3>
+        <button onclick="closeNameModal()" class="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition" aria-label="إغلاق">✕</button>
+      </div>
+      <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+        اكتب اسمك الثلاثي ليظهر في الترحيب بالصفحة الرئيسية، وفي الشريط العلوي، وعلى شهادة التقدير القابلة للطباعة.
+      </p>
+      <div>
+        <label for="student-name-input" class="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5">اسم الطالب:</label>
+        <input           type="text"
+          id="student-name-input"
+          placeholder="مثال: أحمد محمد محمود"
+          onkeydown="if(event.key === 'Enter') saveStudentName()"
+          class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-blue-600"
+        >
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button onclick="closeNameModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs sm:text-sm font-bold hover:bg-slate-200 dark:hover:bg-slate-600 transition">
+          إلغاء
+        </button>
+        <button onclick="saveStudentName()" class="px-5 py-2.5 rounded-xl bg-blue-700 hover:bg-blue-800 text-white text-xs sm:text-sm font-extrabold shadow-sm transition">
+          حفظ الاسم ✓
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- الشريط العلوي (Header) والتنقل الرئيسي -->
+  <!-- ===================================================================== -->
+  <header class="sticky top-0 z-40 bg-white/95 dark:bg-slate-800/95 backdrop-blur border-b border-slate-200 dark:border-slate-700 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16 gap-3">
+        <!-- شعار المنصة وعنوان المنهج -->
+        <div class="flex items-center gap-2 sm:gap-3 cursor-pointer min-w-0 flex-1" onclick="handleBrandClick()">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-900 to-teal-600 flex items-center justify-center text-white font-extrabold text-sm shadow-md shrink-0 tracking-tight" dir="ltr">
+            ICT
+          </div>
+          <div class="min-w-0">
+            <h1 class="text-[13px] sm:text-base font-extrabold text-blue-950 dark:text-white leading-tight truncate" dir="ltr">
+              ICT is good with Mr/Walid
+            </h1>
+            <p class="hidden sm:block text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 truncate">
+              إشراف: <span class="font-bold text-blue-700 dark:text-blue-300" dir="ltr">Mr/Walid Mahmoud</span><span class="hidden sm:inline"> • البرمجة والذكاء الاصطناعي (2ث)</span>
+            </p>
+          </div>
+        </div>
+
+        <!-- أزرار التنقل للشاشات الكبيرة -->
+        <nav id="desktop-main-nav" class="hidden lg:flex items-center gap-1 bg-slate-100 dark:bg-slate-700/60 p-1 rounded-xl" aria-label="التنقل الرئيسي">
+          <button onclick="switchTab('home')" id="nav-home" class="nav-btn px-3 py-2 rounded-lg text-xs xl:text-sm font-bold transition-all">
+            خريطة المنهج
+          </button>
+          <button onclick="switchTab('lessons')" id="nav-lessons" class="nav-btn px-3 py-2 rounded-lg text-xs xl:text-sm font-bold transition-all">
+            الشرح التفاعلي
+          </button>
+          <button onclick="switchTab('glossary')" id="nav-glossary" class="nav-btn px-3 py-2 rounded-lg text-xs xl:text-sm font-bold transition-all">
+            قاموس المصطلحات
+          </button>
+          <button onclick="switchTab('lab')" id="nav-lab" class="nav-btn px-3 py-2 rounded-lg text-xs xl:text-sm font-bold transition-all">
+            المختبر والمحاكاة
+          </button>
+          <button onclick="switchTab('flashcards')" id="nav-flashcards" class="nav-btn px-3 py-2 rounded-lg text-xs xl:text-sm font-bold transition-all">
+            بطاقات المراجعة
+          </button>
+          <button onclick="switchTab('practice')" id="nav-practice" class="nav-btn px-3 py-2 rounded-lg text-xs xl:text-sm font-bold transition-all">
+            الأسئلة والاختبار
+          </button>
+        </nav>
+
+        <!-- أدوات مساعدة: حساب الطالب + مؤشر التقدم + تسجيل الخروج + الوضع الليلي -->
+        <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+          <button id="header-account-btn" onclick="handleHeaderAccountClick()" title="حساب الطالب" class="flex items-center gap-1.5 bg-teal-50 dark:bg-teal-950/60 hover:bg-teal-100 dark:hover:bg-teal-900/60 border border-teal-200 dark:border-teal-800 px-3 py-1.5 rounded-xl transition">
+            <span class="text-xs">👤</span>
+            <span id="header-student-name" class="hidden sm:inline text-xs font-extrabold text-teal-900 dark:text-teal-200 max-w-[115px] truncate">تسجيل الدخول</span>
+          </button>
+
+          <div id="header-progress-pill" class="hidden sm:flex items-center gap-1.5 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 px-3 py-1.5 rounded-xl">
+            <span class="text-xs font-semibold text-blue-900 dark:text-blue-200">إنجازك:</span>
+            <span id="header-progress-text" class="text-xs font-extrabold text-blue-700 dark:text-blue-300">0%</span>
+          </div>
+
+          <button id="header-logout-btn" onclick="logoutUser()" title="تسجيل الخروج" class="hidden items-center gap-1 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800 px-2.5 py-1.5 rounded-xl text-xs font-extrabold text-rose-700 dark:text-rose-300 transition">
+            <span>خروج</span>
+            <span>🚪</span>
+          </button>
+
+          <button onclick="toggleDarkMode()" title="تبديل الوضع الليلي المريح للعين" class="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-amber-300 transition-colors" aria-label="تبديل وضع الإضاءة">
+            <svg id="icon-moon" class="w-5 h-5 block dark:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+            </svg>
+            <svg id="icon-sun" class="w-5 h-5 hidden dark:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- شريط التنقل السفلي المخصص للهواتف المحمولة والشاشات المتوسطة -->
+    <div id="mobile-bottom-nav" class="lg:hidden border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-2 py-1.5 flex items-center justify-around gap-1 overflow-x-auto no-scrollbar">
+      <button onclick="switchTab('home')" id="m-nav-home" class="m-nav-btn flex-1 py-1.5 px-2 rounded-lg text-xs font-bold text-center whitespace-nowrap">المنهج</button>
+      <button onclick="switchTab('lessons')" id="m-nav-lessons" class="m-nav-btn flex-1 py-1.5 px-2 rounded-lg text-xs font-bold text-center whitespace-nowrap">الشرح</button>
+      <button onclick="switchTab('glossary')" id="m-nav-glossary" class="m-nav-btn flex-1 py-1.5 px-2 rounded-lg text-xs font-bold text-center whitespace-nowrap">المصطلحات</button>
+      <button onclick="switchTab('lab')" id="m-nav-lab" class="m-nav-btn flex-1 py-1.5 px-2 rounded-lg text-xs font-bold text-center whitespace-nowrap">المحاكاة</button>
+      <button onclick="switchTab('flashcards')" id="m-nav-flashcards" class="m-nav-btn flex-1 py-1.5 px-2 rounded-lg text-xs font-bold text-center whitespace-nowrap">البطاقات</button>
+      <button onclick="switchTab('practice')" id="m-nav-practice" class="m-nav-btn flex-1 py-1.5 px-2 rounded-lg text-xs font-bold text-center whitespace-nowrap">الاختبار</button>
+    </div>
+  </header>
+
+  <!-- ===================================================================== -->
+  <!-- المحتوى الرئيسي للمنصة -->
+  <!-- ===================================================================== -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+
+    <!-- ******************************************************************* -->
+    <!-- بوابة تسجيل الدخول وإنشاء الحساب للطلاب ولوحة المعلم (AUTH PORTAL) -->
+    <!-- ******************************************************************* -->
+    <section id="auth-portal-section" class="max-w-xl mx-auto space-y-6 animate-fade-up">
+      <div class="rounded-3xl bg-gradient-to-l from-blue-950 via-blue-900 to-teal-800 text-white p-6 sm:p-8 shadow-xl text-center space-y-2">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-teal-400/20 border border-teal-300/40 text-teal-100 text-xs sm:text-sm font-extrabold" dir="ltr">
+          ✨ ICT is good with Mr/Walid ✨
+        </div>
+        <h2 class="text-2xl sm:text-3xl font-extrabold">بوابة دخول الطلاب</h2>
+        <p class="text-xs sm:text-sm text-blue-100">
+          سجّل دخولك بالبريد الإلكتروني وكلمة المرور لحفظ تقدمك في الدروس ودرجاتك في الاختبار وشهادة التقدير الخاصة بك.
+        </p>
+      </div>
+
+      <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-lg space-y-5">
+        <!-- أزرار التبديل بين: تسجيل دخول طالب / إنشاء حساب جديد / دخول المعلم -->
+        <div class="grid grid-cols-3 gap-1.5 bg-slate-100 dark:bg-slate-700/70 p-1.5 rounded-2xl">
+          <button type="button" onclick="switchAuthMode('login')" id="auth-tab-login" class="py-2.5 px-2 rounded-xl text-xs sm:text-sm font-extrabold transition">
+            تسجيل الدخول
+          </button>
+          <button type="button" onclick="switchAuthMode('register')" id="auth-tab-register" class="py-2.5 px-2 rounded-xl text-xs sm:text-sm font-extrabold transition">
+            حساب طالب جديد
+          </button>
+          <button type="button" onclick="switchAuthMode('teacher')" id="auth-tab-teacher" class="py-2.5 px-2 rounded-xl text-xs sm:text-sm font-extrabold transition">
+            دخول المعلم 👨‍🏫
+          </button>
+        </div>
+
+        <!-- صندوق تنبيهات مخصص بدل alert() -->
+        <div id="auth-feedback-box" class="hidden rounded-2xl p-3.5 text-xs sm:text-sm font-bold"></div>
+
+        <!-- نموذج 1: تسجيل دخول الطالب -->
+        <form id="form-student-login" onsubmit="handleStudentLogin(event)" class="space-y-4">
+          <div>
+            <label for="login-username" class="block text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1.5">
+              البريد الإلكتروني (Gmail):
+            </label>
+            <input               type="email"
+              id="login-username"
+              required
+              dir="ltr"
+              autocomplete="email"
+              placeholder="مثال: ahmed@gmail.com"
+              class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-blue-600"
+            >
+          </div>
+
+          <div>
+            <label for="login-password" class="block text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1.5">
+              كلمة المرور (Password):
+            </label>
+            <div class="relative">
+              <input                 type="password"
+                id="login-password"
+                required
+                autocomplete="current-password"
+                placeholder="اكتب كلمة المرور الخاصة بك"
+                class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-blue-600"
+              >
+              <button type="button" onclick="togglePasswordVisibility('login-password')" class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 hover:text-blue-600">
+                👁️
+              </button>
+            </div>
+          </div>
+
+          <div class="text-left">
+            <button type="button" onclick="handleForgotPassword()" class="text-xs font-extrabold text-blue-700 dark:text-blue-300 hover:underline">نسيت كلمة المرور؟</button>
+          </div>
+
+          <button type="submit" id="btn-submit-login" class="w-full py-3.5 rounded-2xl bg-gradient-to-l from-blue-800 to-teal-700 hover:from-blue-700 hover:to-teal-600 text-white font-extrabold text-sm sm:text-base shadow-md transition">
+            دخول إلى المنصة 🚀
+          </button>
+
+          
+        </form>
+
+        <!-- نموذج 2: إنشاء حساب طالب جديد -->
+        <form id="form-student-register" onsubmit="handleStudentRegister(event)" class="hidden space-y-4">
+          <div>
+            <label for="reg-fullname" class="block text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1.5">
+              الاسم الثلاثي للطالب (يظهر في شهادة التقدير):
+            </label>
+            <input               type="text"
+              id="reg-fullname"
+              required
+              placeholder="مثال: أحمد محمد محمود"
+              class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-blue-600"
+            >
+          </div>
+
+          <div>
+            <label for="reg-code" class="block text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1.5">
+              كود التسجيل (يعطيه لك المعلم، 8 حروف وأرقام):
+            </label>
+            <input               type="text"
+              id="reg-code"
+              required
+              autocomplete="off"
+              autocapitalize="characters"
+              maxlength="12"
+              dir="ltr"
+              placeholder="مثال: K7M2XQ9P"
+              class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold tracking-widest text-slate-900 dark:text-white focus:outline-none focus:border-blue-600"
+            >
+          </div>
+
+          <div>
+            <label for="reg-email" class="block text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1.5">
+              بريدك الإلكتروني (Gmail) الذي ستدخل به وتستعيد به كلمة المرور:
+            </label>
+            <input               type="email"
+              id="reg-email"
+              required
+              dir="ltr"
+              autocomplete="email"
+              placeholder="مثال: ahmed@gmail.com"
+              class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-blue-600"
+            >
+          </div>
+
+          <div>
+            <label for="reg-password" class="block text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1.5">
+              اختر كلمة مرور خاصة بالموقع (ليست كلمة مرور الجيميل!) - 8 أحرف على الأقل، فيها حرف كبير وحرف صغير ورقم ورمز مثل @ أو #:
+            </label>
+            <div class="relative">
+              <input                 type="password"
+                id="reg-password"
+                required
+                minlength="8"
+                placeholder="مثال: Ict@2026x"
+                class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-blue-600"
+              >
+              <button type="button" onclick="togglePasswordVisibility('reg-password')" class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 hover:text-blue-600">
+                👁️
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" id="btn-submit-register" class="w-full py-3.5 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm sm:text-base shadow-md transition">
+            إنشاء الحساب والدخول للمنصة ✨
+          </button>
+        </form>
+
+        <!-- نموذج 3: دخول المعلم (Mr/Walid Mahmoud) -->
+        <form id="form-teacher-login" onsubmit="handleTeacherLogin(event)" class="hidden space-y-4">
+          <div class="rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 p-3.5 text-xs text-amber-900 dark:text-amber-200 leading-relaxed">
+            <strong>لوحة تحكم المعلم (Mr/Walid Mahmoud):</strong> تتيح لك متابعة جميع الطلاب المسجلين، درجاتهم في الاختبار الشامل، واستحقاقهم لشهادات التقدير، وإنشاء حسابات جديدة للطلاب.
+          </div>
+
+          <div>
+            <label for="teacher-passcode" class="block text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1.5">
+              كلمة مرور المعلم:
+            </label>
+            <div class="relative">
+              <input                 type="password"
+                id="teacher-passcode"
+                required
+                placeholder="أدخل كلمة مرور المعلم"
+                class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-amber-600"
+              >
+              <button type="button" onclick="togglePasswordVisibility('teacher-passcode')" class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500 hover:text-amber-600">
+                👁️
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="w-full py-3.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-sm sm:text-base shadow-md transition">
+            فتح لوحة متابعة الطلاب 👨‍🏫
+          </button>
+        </form>
+      </div>
+
+      <!-- نص تعريفي ظاهر لمحركات البحث والزوار -->
+      <section id="about-site" class="rounded-3xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-6 sm:p-7 shadow-sm space-y-3 text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+        <h2 class="text-lg sm:text-xl font-extrabold text-blue-950 dark:text-white">عن المنصة</h2>
+        <p>منصة <strong>ICT is good with Mr/Walid</strong> هي موقع مراجعة وتعلم لمنهج <strong>البرمجة والذكاء الاصطناعي (ICT)</strong> للصف الثاني الثانوي، من إعداد وتقديم المهندس وليد محمود.</p>
+        <h3 class="font-extrabold text-blue-900 dark:text-blue-300">ماذا ستجد داخل المنصة؟</h3>
+        <ul class="list-disc pr-5 space-y-1">
+          <li>شرح مبسط لفصول المنهج: تكنولوجيا المعلومات والمجتمع، كيف يعمل الذكاء الاصطناعي، وHTML الدلالية وإمكانية الوصول.</li>
+          <li>بطاقات مراجعة للمصطلحات مع قاموس يمكن البحث فيه.</li>
+          <li>أسئلة متدرجة المستوى للتدرب بعد كل درس.</li>
+          <li>اختبار نهائي وشهادة تقدير، مع حفظ تقدم كل طالب ودرجاته.</li>
+        </ul>
+        <p>الدخول للطلاب المسجلين: أدخل بريدك الإلكتروني وكلمة المرور أعلاه، أو أنشئ حساب طالب جديد من تبويب "حساب طالب جديد".</p>
+      </section>
+    </section>
+
+    <!-- ******************************************************************* -->
+    <!-- لوحة تحكم المعلم (TEACHER DASHBOARD - Mr/Walid Mahmoud) -->
+    <!-- ******************************************************************* -->
+    <section id="section-teacher-dashboard" class="hidden space-y-6 animate-fade-up">
+      <div class="rounded-3xl bg-gradient-to-l from-blue-950 via-blue-900 to-teal-800 text-white p-6 sm:p-8 shadow-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="space-y-1">
+          <span class="inline-block px-3 py-1 rounded-full bg-amber-400/20 border border-amber-300/40 text-amber-200 text-xs font-extrabold">
+            لوحة إدارة ومتابعة الطلاب
+          </span>
+          <h2 class="text-2xl sm:text-3xl font-extrabold" dir="ltr">Welcome, Mr/Walid Mahmoud 👨‍🏫</h2>
+          <p class="text-xs sm:text-sm text-blue-100">
+            تابع تقدم طلابك في الدروس ودرجاتهم في الاختبار الشامل وأنشئ حسابات جديدة لهم بسهولة.
+          </p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="enterStudentPreviewFromTeacher()" class="px-4 py-2.5 rounded-xl bg-white text-blue-950 font-extrabold text-xs sm:text-sm hover:bg-blue-50 transition">
+            معاينة محتوى المنهج 📚
+          </button>
+          <button onclick="logoutUser()" class="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-extrabold text-xs sm:text-sm transition">
+            تسجيل خروج المعلم 🚪
+          </button>
+        </div>
+      </div>
+
+      <!-- مؤشر حالة الربط السحابي للمتابعة عن بُعد -->
+      <div id="td-cloud-status-banner" class="rounded-2xl p-4 border text-xs sm:text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <!-- يُحدّث تلقائيًا حسب حالة الربط السحابي -->
+      </div>
+
+      <!-- التحكم في فتح الترم التاني -->
+      <div id="td-term2-card" class="rounded-2xl p-4 border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div class="text-xs sm:text-sm text-slate-700 dark:text-slate-200">
+          <strong>الترم التاني:</strong> <span id="td-term2-status">...</span>
+          <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">لما تفتحه يظهر لكل الطلاب، ولما تقفله يرجع مقفول.</div>
+        </div>
+        <button id="td-term2-btn" onclick="toggleTerm2()" class="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs sm:text-sm transition">فتح الترم التاني</button>
+      </div>
+
+      <!-- إحصائيات سريعة للمعلم -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div class="text-xs font-bold text-slate-500 dark:text-slate-400">إجمالي الطلاب المسجلين</div>
+          <div id="td-total-students" class="text-3xl font-extrabold text-blue-700 dark:text-blue-400 mt-1">0</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div class="text-xs font-bold text-slate-500 dark:text-slate-400">طلاب أتموا الاختبار النهائي</div>
+          <div id="td-tested-students" class="text-3xl font-extrabold text-teal-600 dark:text-teal-400 mt-1">0</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div class="text-xs font-bold text-slate-500 dark:text-slate-400">المتفوقون الحاصلون على الشهادة (≥18/20)</div>
+          <div id="td-honor-students" class="text-3xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">0</div>
+        </div>
+      </div>
+
+      <!-- أكواد التسجيل -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <h3 class="text-lg font-extrabold text-slate-900 dark:text-white">🔑 أكواد التسجيل (كل كود يسمح بـ 3 تسجيلات)</h3>
+          <div id="rc-summary" class="text-xs font-extrabold text-slate-500"></div>
+        </div>
+        <div class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">أعطِ كل طالب كودًا واحدًا. الطالب لا يستطيع إنشاء حساب بدون كود صحيح، والكود يتوقف بعد 3 استخدامات. يمكنك تعطيل أي كود أو حذفه في أي وقت.</div>
+        <div id="rc-feedback" class="hidden rounded-xl p-3 text-xs font-bold"></div>
+        <form onsubmit="teacherGenerateCodes(event)" class="flex flex-wrap items-center gap-2">
+          <input type="number" id="rc-count" min="1" max="100" value="5" class="w-24 px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold" >
+          <button type="submit" class="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm transition">إنشاء أكواد جديدة</button>
+          <button type="button" onclick="copyAllRegCodes()" class="px-4 py-2 rounded-xl border border-blue-300 text-blue-700 font-extrabold text-sm">نسخ كل الأكواد</button>
+          <button type="button" onclick="exportRegCodesCsv()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 dark:text-slate-200 font-extrabold text-sm">تصدير ملف CSV</button>
+        </form>
+        <div id="rc-list"></div>
+      </div>
+
+      <!-- إضافة حساب طالب جديد من قبل المعلم -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+        <h3 class="text-lg font-extrabold text-slate-900 dark:text-white">➕ إنشاء حساب طالب جديد (بريد إلكتروني وكلمة مرور)</h3>
+        <div id="td-add-feedback" class="hidden rounded-xl p-3 text-xs font-bold"></div>
+        <form onsubmit="teacherCreateStudent(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <input type="text" id="td-new-fullname" required placeholder="اسم الطالب الثلاثي" class="px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold" >
+          <input type="text" id="td-new-username" required placeholder="البريد الإلكتروني للطالب" dir="ltr" class="px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold" >
+          <input type="text" id="td-new-password" required minlength="8" placeholder="كلمة المرور للطالب" class="px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold" >
+          <button type="submit" class="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm transition">
+            إضافة الطالب ✓
+          </button>
+        </form>
+      </div>
+
+      <!-- قائمة الطلاب ونتائجهم -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h3 class="text-lg font-extrabold text-slate-900 dark:text-white">📋 سجل الطلاب والدرجات</h3>
+          <input type="text" id="td-search-input" oninput="renderTeacherDashboard()" placeholder="ابحث باسم الطالب أو الكود..." class="px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold" >
+        </div>
+        <div id="td-students-list" class="space-y-3">
+          <!-- يتم تعبئته ديناميكيًا -->
+        </div>
+      </div>
+    </section>
+
+    <!-- شريط اختيار الترم -->
+    <div id="term-bar" class="hidden grid grid-cols-2 gap-2 sm:gap-3 mb-5">
+      <button type="button" id="term-btn-1" onclick="selectTerm(1)" class="py-3 px-3 rounded-2xl text-sm sm:text-base font-extrabold transition border-2 border-blue-700 bg-blue-700 text-white shadow">الترم الأول</button>
+      <button type="button" id="term-btn-2" onclick="selectTerm(2)" class="py-3 px-3 rounded-2xl text-sm sm:text-base font-extrabold transition border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-300">🔒 الترم التاني <span class="text-xs font-bold">(قريبًا)</span></button>
+    </div>
+
+    <section id="section-term2" class="tab-section hidden space-y-6 animate-fade-up"></section>
+
+    <!-- ******************************************************************* -->
+    <!-- القسم 1: الرئيسية وخريطة المنهج (HOME) -->
+    <!-- ******************************************************************* -->
+    <section id="section-home" class="tab-section hidden space-y-8 animate-fade-up">
+      <!-- البطاقة الترحيبية -->
+      <div class="rounded-3xl bg-gradient-to-l from-blue-950 via-blue-900 to-teal-800 text-white p-6 sm:p-8 shadow-xl space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-teal-400/20 border border-teal-300/40 text-teal-100 text-xs sm:text-sm font-extrabold" dir="ltr">
+            ✨ ICT is good with Mr/Walid ✨
+          </span>
+          <button id="hero-name-badge" onclick="openNameModal()" class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white/15 hover:bg-white/25 border border-white/30 text-white text-xs sm:text-sm font-bold transition">
+            <span>✏️ اضغط لإضافة اسمك كطالب</span>
+          </button>
+        </div>
+
+        <h2 id="hero-welcome-heading" class="text-2xl sm:text-3xl font-extrabold leading-snug">
+          رحلتك التفاعلية في البرمجة والذكاء الاصطناعي
+        </h2>
+        <p class="text-xs sm:text-sm text-blue-100 max-w-3xl leading-relaxed">
+          منصة تعليمية شاملة تغطي جميع فصول الكتاب المدرسي الأربعة (14 درسًا) بالشرح المبسط، وقاموس يضم 50 مصطلحًا، ومختبرات محاكاة عملية، وبطاقات مراجعة، واختبار نهائي يمنحك شهادة تقدير معتمدة باسمك.
+        </p>
+
+        <div class="flex flex-wrap gap-3 pt-2">
+          <button onclick="switchTab('lessons')" class="px-5 py-3 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs sm:text-sm shadow-md transition">
+            ابدأ الشرح التفاعلي 📖
+          </button>
+          <button onclick="switchTab('lab')" class="px-5 py-3 rounded-2xl bg-white/15 hover:bg-white/25 border border-white/30 text-white font-extrabold text-xs sm:text-sm transition">
+            جرّب المختبر والمحاكاة 🧪
+          </button>
+          <button onclick="switchTab('practice')" class="px-5 py-3 rounded-2xl bg-teal-600 hover:bg-teal-500 text-white font-extrabold text-xs sm:text-sm shadow-md transition">
+            الاختبار الشامل والشهادة 🏆
+          </button>
+        </div>
+      </div>
+
+      <!-- لوحة مؤشرات إنجاز الطالب -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div class="text-xs font-bold text-slate-500 dark:text-slate-400">الدروس المكتملة</div>
+          <div id="stat-lessons" class="text-2xl sm:text-3xl font-extrabold text-blue-700 dark:text-blue-400 mt-1">0 / 14</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div class="text-xs font-bold text-slate-500 dark:text-slate-400">البطاقات المتقنة</div>
+          <div id="stat-cards" class="text-2xl sm:text-3xl font-extrabold text-teal-600 dark:text-teal-400 mt-1">0 / 49</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div class="text-xs font-bold text-slate-500 dark:text-slate-400">التدريبات المحلولة</div>
+          <div id="stat-practice" class="text-2xl sm:text-3xl font-extrabold text-indigo-600 dark:text-indigo-400 mt-1">0 / 19</div>
+        </div>
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-700 shadow-sm">
+          <div class="text-xs font-bold text-slate-500 dark:text-slate-400">نتيجة الاختبار الشامل</div>
+          <div id="stat-exam" class="text-2xl sm:text-3xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">لم يُجرَ بعد</div>
+        </div>
+      </div>
+
+      <!-- خريطة الفصول الأربعة -->
+      <div class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xl font-extrabold text-slate-900 dark:text-white">خريطة المنهج (الفصول الأربعة)</h3>
+          <span class="text-xs font-bold text-slate-500">اختر أي درس لبدء المذاكرة</span>
+        </div>
+        <div id="curriculum-grid" class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <!-- يُملأ ديناميكيًا بواسطة renderCurriculumGrid() -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ******************************************************************* -->
+    <!-- القسم 2: الشرح التفاعلي للدروس (LESSONS) -->
+    <!-- ******************************************************************* -->
+    <section id="section-lessons" class="tab-section hidden space-y-6 animate-fade-up">
+      <div id="lessons-explorer-container" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- الشريط الجانبي لاختيار الفصل والدرس -->
+        <aside id="lessons-sidebar" class="lg:col-span-4 space-y-4">
+          <!-- يُملأ ديناميكيًا -->
+        </aside>
+
+        <!-- محتوى الدرس المحدد -->
+        <div id="lesson-content-area" class="lg:col-span-8 space-y-6">
+          <!-- يُملأ ديناميكيًا -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ******************************************************************* -->
+    <!-- القسم 3: قاموس المصطلحات الشامل (GLOSSARY) -->
+    <!-- ******************************************************************* -->
+    <section id="section-glossary" class="tab-section hidden space-y-6 animate-fade-up">
+      <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">📖 قاموس المصطلحات والقوانين الشامل</h2>
+            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">ابحث في جميع مصطلحات الكتاب المدرسي (50 مصطلحًا موثقًا) أو صفِّ حسب الفصل.</p>
+          </div>
+          <span class="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 text-xs font-extrabold self-start sm:self-center">
+            50 مصطلحًا
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <input             type="text"
+            id="glossary-search"
+            oninput="renderGlossary()"
+            placeholder="ابحث عن مصطلح (مثال: قانون مور، TLS، CRAP، PDCA)..."
+            class="sm:col-span-2 px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-blue-600"
+          >
+          <select             id="glossary-chapter"
+            onchange="renderGlossary()"
+            class="px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-blue-600"
+          >
+            <option value="all">جميع الفصول (1 - 4)</option>
+            <option value="1">الفصل الأول: تكنولوجيا المعلومات والذكاء الاصطناعي</option>
+            <option value="2">الفصل الثاني: الأمن السيبراني</option>
+            <option value="3">الفصل الثالث: تطبيقات الويب</option>
+            <option value="4">الفصل الرابع: تصميم الويب والوسائط</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="glossary-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- يُملأ ديناميكيًا بواسطة renderGlossary() -->
+      </div>
+    </section>
+
+    <!-- ******************************************************************* -->
+    <!-- القسم 4: المختبر والمحاكاة التفاعلية (SIMULATION LAB) -->
+    <!-- ******************************************************************* -->
+    <section id="section-lab" class="tab-section hidden space-y-6 animate-fade-up">
+      <div class="bg-white dark:bg-slate-800 rounded-3xl p-5 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+        <div>
+          <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">🧪 المختبر التفاعلي والمحاكاة العملية</h2>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">جرّب المفاهيم التقنية بنفسك عبر 6 أدوات محاكاة تفاعلية مرتبطة بدروس المنهج.</p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+          <button onclick="selectSim('sim1')" id="sim-btn-sim1" class="sim-btn p-3 rounded-2xl text-right text-xs sm:text-sm font-extrabold border transition">
+            1. حاسبة قانون مور والحوسبة الطرفية (ف1)
+          </button>
+          <button onclick="selectSim('sim2')" id="sim-btn-sim2" class="sim-btn p-3 rounded-2xl text-right text-xs sm:text-sm font-extrabold border transition">
+            2. الشبكة العصبية وكاشف الهلوسة (ف1)
+          </button>
+          <button onclick="selectSim('sim3')" id="sim-btn-sim3" class="sim-btn p-3 rounded-2xl text-right text-xs sm:text-sm font-extrabold border transition">
+            3. محاكي HTTPS ومختبر المصادقة 2FA (ف2)
+          </button>
+          <button onclick="selectSim('sim4')" id="sim-btn-sim4" class="sim-btn p-3 rounded-2xl text-right text-xs sm:text-sm font-extrabold border transition">
+            4. حاسبة مصفوفة المخاطر و DMZ (ف2)
+          </button>
+          <button onclick="selectSim('sim5')" id="sim-btn-sim5" class="sim-btn p-3 rounded-2xl text-right text-xs sm:text-sm font-extrabold border transition">
+            5. رحلة طلب الويب (الطبقات الثلاث و API) (ف3)
+          </button>
+          <button onclick="selectSim('sim6')" id="sim-btn-sim6" class="sim-btn p-3 rounded-2xl text-right text-xs sm:text-sm font-extrabold border transition">
+            6. حاسبة CVR وتجربة مبادئ CRAP (ف4)
+          </button>
+        </div>
+      </div>
+
+      <div id="sim-workspace" class="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-md">
+        <!-- يُملأ ديناميكيًا حسب المحاكاة المختارة -->
+      </div>
+    </section>
+
+    <!-- ******************************************************************* -->
+    <!-- القسم 5: بطاقات المراجعة ثلاثية الأبعاد (FLASHCARDS) -->
+    <!-- ******************************************************************* -->
+    <section id="section-flashcards" class="tab-section hidden space-y-6 animate-fade-up">
+      <div class="max-w-2xl mx-auto space-y-6">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <label for="fc-chapter-filter" class="text-xs font-extrabold text-slate-600 dark:text-slate-300">الفصل:</label>
+            <select id="fc-chapter-filter" onchange="filterFlashcards()" class="px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-xs sm:text-sm font-bold">
+              <option value="all">جميع الفصول (50 بطاقة)</option>
+              <option value="1">الفصل الأول</option>
+              <option value="2">الفصل الثاني</option>
+              <option value="3">الفصل الثالث</option>
+              <option value="4">الفصل الرابع</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2">
+            <span id="fc-counter" class="text-xs sm:text-sm font-extrabold text-slate-700 dark:text-slate-200">1 / 49</span>
+            <span id="fc-lesson-tag" class="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 text-xs font-extrabold">الدرس 1-1</span>
+          </div>
+        </div>
+
+        <div class="perspective-1000 w-full h-72 sm:h-80 cursor-pointer select-none" onclick="flipCard()">
+          <div id="flashcard-inner" class="relative w-full h-full transform-style-3d shadow-lg rounded-3xl">
+            <!-- وجه البطاقة الأمامي (المصطلح / السؤال) -->
+            <div class="absolute inset-0 backface-hidden rounded-3xl bg-gradient-to-br from-white to-blue-50/70 dark:from-slate-800 dark:to-slate-800/90 border-2 border-blue-200 dark:border-blue-800 p-6 sm:p-8 flex flex-col items-center justify-center text-center">
+              <span class="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-3">المفهوم الأساسي</span>
+              <h3 id="fc-front-text" class="text-xl sm:text-3xl font-extrabold text-slate-900 dark:text-white leading-relaxed">
+                قانون مور (Moore's Law)
+              </h3>
+              <p class="mt-6 text-xs text-slate-400 flex items-center gap-1.5">
+                <span>اضغط لقلب البطاقة وعرض الإجابة</span>
+                <span>↻</span>
+              </p>
+            </div>
+
+            <!-- وجه البطاقة الخلفي (التعريف / الإجابة) -->
+            <div class="absolute inset-0 backface-hidden rotate-y-180 rounded-3xl bg-gradient-to-br from-blue-900 to-teal-900 text-white border-2 border-teal-500/40 p-6 sm:p-8 flex flex-col items-center justify-center text-center">
+              <span class="text-xs font-bold text-teal-300 mb-3">التعريف الموثق من الكتاب</span>
+              <p id="fc-back-text" class="text-base sm:text-xl font-semibold leading-relaxed">
+                الملاحظة التاريخية والتجريبية القائلة إن عدد الترانزستورات في الدائرة المتكاملة (الشريحة) يتضاعف تقريبًا كل عامين، وهو ليس قانونًا فيزيائيًا ثابتًا.
+              </p>
+              <p class="mt-6 text-xs text-blue-200">اضغط للعودة إلى المصطلح ↺</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- أزرار التحكم بالبطاقات -->
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <button onclick="prevCard()" class="px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+            → السابقة
+          </button>
+
+          <div class="flex items-center gap-2">
+            <button onclick="markCardStatus(false)" class="px-4 py-2.5 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 font-bold text-xs sm:text-sm hover:bg-amber-200 transition">
+              تحتاج مراجعة
+            </button>
+            <button onclick="markCardStatus(true)" id="btn-card-mastered" class="px-4 py-2.5 rounded-xl bg-teal-600 text-white font-bold text-xs sm:text-sm hover:bg-teal-700 transition shadow-sm">
+              ✓ أتقنتها
+            </button>
+          </div>
+
+          <button onclick="nextCard()" class="px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+            التالية ←
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ******************************************************************* -->
+    <!-- القسم 6: الأسئلة المتدرجة والاختبار النهائي (PRACTICE & EXAM) -->
+    <!-- ******************************************************************* -->
+    <section id="section-practice" class="tab-section hidden space-y-6 animate-fade-up">
+      <!-- التبديل بين التدريبات المتدرجة والاختبار النهائي -->
+      <div class="bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-wrap gap-2">
+        <button onclick="switchPracticeSubTab('graded')" id="subtab-graded" class="flex-1 min-w-[200px] py-3 px-4 rounded-xl font-extrabold text-sm transition">
+          1. أسئلة متدرجة الصعوبة (مع شرح سبب الخطأ)
+        </button>
+        <button onclick="switchPracticeSubTab('exam')" id="subtab-exam" class="flex-1 min-w-[200px] py-3 px-4 rounded-xl font-extrabold text-sm transition">
+          2. الاختبار النهائي التشخيصي (20 سؤالًا)
+        </button>
+      </div>
+
+      <!-- الواجهة الفرعية أ: الأسئلة متدرجة الصعوبة -->
+      <div id="view-graded-practice" class="space-y-6">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h3 class="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white">اختر مستوى الصعوبة للتدريب</h3>
+            <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">تتدرج الأسئلة من تذكر المفاهيم إلى التطبيق والتحليل الهندسي، مع شرح فوري لسبب صحة أو خطأ إجابتك.</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button onclick="filterGradedLevel(1)" id="lvl-btn-1" class="lvl-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition">
+              المستوى 1: أساسي
+            </button>
+            <button onclick="filterGradedLevel(2)" id="lvl-btn-2" class="lvl-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition">
+              المستوى 2: تطبيقي
+            </button>
+            <button onclick="filterGradedLevel(3)" id="lvl-btn-3" class="lvl-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition">
+              المستوى 3: تحليل هندسي
+            </button>
+          </div>
+        </div>
+
+        <div id="graded-questions-list" class="space-y-5">
+          <!-- الأسئلة المتدرجة تُعرض هنا -->
+        </div>
+      </div>
+
+      <!-- الواجهة الفرعية ب: الاختبار النهائي الشامل -->
+      <div id="view-final-exam" class="hidden space-y-6">
+        <div id="exam-intro-card" class="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-md text-center max-w-2xl mx-auto space-y-4">
+          <div class="w-16 h-16 mx-auto rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300 flex items-center justify-center text-3xl font-extrabold">
+            📝
+          </div>
+          <h3 class="text-2xl font-extrabold text-slate-900 dark:text-white">الاختبار النهائي الشامل للترم الأول</h3>
+          <p class="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+            يتكون الاختبار من <strong>20 سؤالًا</strong> تغطي جميع فصول الكتاب الأربعة (5 أسئلة لكل فصل). بعد تسليم الإجابات، ستحصل على نتيجتك التفصيلية باسمك وقائمة مخصصة بالدروس والمواضيع التي تحتاج إلى مراجعتها.
+          </p>
+          <div class="rounded-2xl bg-amber-50 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-700 p-3.5 text-xs sm:text-sm font-bold text-amber-950 dark:text-amber-200">
+            🏆 <strong>شرط شهادة التقدير:</strong> احصل على الدرجة النهائية (20/20) أو انقص درجة أو درجتين بحد أقصى (18 أو 19 من 20) لتحصل فورًا على <strong>شهادة تقدير رسمية قابلة للطباعة باسمك</strong> من <span dir="ltr">Mr/Walid Mahmoud</span>!
+          </div>
+          <div class="flex flex-wrap items-center justify-center gap-3 pt-1">
+            <button onclick="openNameModal()" class="px-5 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-white font-bold text-sm transition">
+              👤 <span id="exam-intro-name-btn">أضف اسمك للشهادة</span>
+            </button>
+            <button onclick="startFinalExam()" class="px-8 py-3.5 rounded-2xl bg-blue-700 hover:bg-blue-800 text-white font-extrabold text-base shadow-lg transition">
+              ابدأ الاختبار الآن
+            </button>
+          </div>
+        </div>
+
+        <!-- حاوية أسئلة الاختبار -->
+        <div id="exam-active-container" class="hidden space-y-6">
+          <div class="bg-white dark:bg-slate-800 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-700 shadow-sm flex flex-wrap items-center justify-between gap-3">
+            <div class="font-bold text-sm text-slate-700 dark:text-slate-200">
+              تمت الإجابة على: <span id="exam-answered-count" class="text-blue-600 dark:text-blue-400 font-extrabold">0</span> من 20
+            </div>
+            <div class="w-full sm:w-64 bg-slate-100 dark:bg-slate-700 h-2.5 rounded-full overflow-hidden">
+              <div id="exam-progress-bar" class="bg-blue-600 h-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+          </div>
+
+          <div id="exam-questions-wrapper" class="space-y-5">
+            <!-- يتم توليد الأسئلة العشرين هنا -->
+          </div>
+
+          <!-- رسالة تنبيه مخصصة بدل alert() في حال وجود أسئلة غير مجابة -->
+          <div id="exam-warning-box" class="hidden rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-300 dark:border-amber-700 p-4 text-amber-900 dark:text-amber-200 text-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <span id="exam-warning-text">لم تقم بالإجابة عن جميع الأسئلة بعد. هل ترغب في تسليم الاختبار على أي حال؟</span>
+            <div class="flex gap-2 shrink-0">
+              <button onclick="hideExamWarning()" class="px-3.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 font-bold text-xs">
+                مراجعة الأسئلة
+              </button>
+              <button onclick="gradeFinalExam(true)" class="px-3.5 py-1.5 rounded-xl bg-amber-600 text-white font-bold text-xs">
+                تأكيد التسليم الآن
+              </button>
+            </div>
+          </div>
+
+          <div class="flex justify-center pt-2">
+            <button onclick="gradeFinalExam(false)" class="px-8 py-3.5 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-base shadow-lg transition">
+              تسليم الاختبار وعرض النتيجة التشخيصية
+            </button>
+          </div>
+        </div>
+
+        <!-- شاشة تقرير النتيجة التشخيصية -->
+        <div id="exam-results-container" class="hidden space-y-6">
+          <!-- تُولد ديناميكيًا بعد التصحيح -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- تذييل الصفحة (Footer) -->
+  <!-- ===================================================================== -->
+  <footer class="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 py-6 mt-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+      <p class="font-bold text-slate-700 dark:text-slate-200">
+        منصة <span class="text-blue-700 dark:text-blue-400 font-extrabold" dir="ltr">ICT is good with Mr/Walid</span> • إعداد وتقديم: <span class="font-extrabold" dir="ltr">Mr/Walid Mahmoud</span>
+      </p>
+      <p>
+        منهج البرمجة والذكاء الاصطناعي للصف الثاني الثانوي (الترم الأول) • وفق الكتاب المدرسي المعتمد.
+      </p>
+    </div>
+  </footer>
+
+  <!-- ===================================================================== -->
+  <!-- البيانات التعليمية والمنطق البرمجي التفاعلي (JavaScript) -->
+  <!-- ===================================================================== -->
+  <script src="app.v3.js?v=3"></script>
+</body>
+</html>
