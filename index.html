@@ -41,7 +41,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, writeBatch, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     /**
      * [مكان الربط المخصص للمعلم - Mr/Walid Mahmoud]
@@ -70,6 +70,9 @@
       getDoc,
       setDoc,
       deleteDoc,
+      writeBatch,
+      updateDoc,
+      increment,
       onSnapshot,
       collection,
       firebaseConfig: null,
@@ -423,6 +426,22 @@
           </div>
 
           <div>
+            <label for="reg-code" class="block text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1.5">
+              كود التسجيل (يعطيه لك المعلم، 8 حروف وأرقام):
+            </label>
+            <input               type="text"
+              id="reg-code"
+              required
+              autocomplete="off"
+              autocapitalize="characters"
+              maxlength="12"
+              dir="ltr"
+              placeholder="مثال: K7M2XQ9P"
+              class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold tracking-widest text-slate-900 dark:text-white focus:outline-none focus:border-blue-600"
+            >
+          </div>
+
+          <div>
             <label for="reg-username" class="block text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1.5">
               اختر اسم مستخدم أو كود خاص بك (حروف أو أرقام):
             </label>
@@ -544,6 +563,23 @@
           <div class="text-xs font-bold text-slate-500 dark:text-slate-400">المتفوقون الحاصلون على الشهادة (≥18/20)</div>
           <div id="td-honor-students" class="text-3xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">0</div>
         </div>
+      </div>
+
+      <!-- أكواد التسجيل -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <h3 class="text-lg font-extrabold text-slate-900 dark:text-white">🔑 أكواد التسجيل (كل كود يسمح بـ 3 تسجيلات)</h3>
+          <div id="rc-summary" class="text-xs font-extrabold text-slate-500"></div>
+        </div>
+        <div class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">أعطِ كل طالب كودًا واحدًا. الطالب لا يستطيع إنشاء حساب بدون كود صحيح، والكود يتوقف بعد 3 استخدامات. يمكنك تعطيل أي كود أو حذفه في أي وقت.</div>
+        <div id="rc-feedback" class="hidden rounded-xl p-3 text-xs font-bold"></div>
+        <form onsubmit="teacherGenerateCodes(event)" class="flex flex-wrap items-center gap-2">
+          <input type="number" id="rc-count" min="1" max="100" value="5" class="w-24 px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold" >
+          <button type="submit" class="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm transition">إنشاء أكواد جديدة</button>
+          <button type="button" onclick="copyAllRegCodes()" class="px-4 py-2 rounded-xl border border-blue-300 text-blue-700 font-extrabold text-sm">نسخ كل الأكواد</button>
+          <button type="button" onclick="exportRegCodesCsv()" class="px-4 py-2 rounded-xl border border-slate-300 text-slate-700 dark:text-slate-200 font-extrabold text-sm">تصدير ملف CSV</button>
+        </form>
+        <div id="rc-list"></div>
       </div>
 
       <!-- إضافة حساب طالب جديد من قبل المعلم -->
@@ -2216,6 +2252,7 @@
     function startTeacherListener() {
       const cs = window.cloudStore;
       if (!cs || !cs.ready || !cs.db || teacherUnsubscribe) return;
+      startRegCodesListener();
       try {
         const colRef = cs.collection(cs.db, 'artifacts', cs.appId, 'public', 'data', 'students');
         teacherUnsubscribe = cs.onSnapshot(
@@ -2498,8 +2535,13 @@
       const fullName = (document.getElementById('reg-fullname').value || '').trim();
       const rawUser = document.getElementById('reg-username').value;
       const password = document.getElementById('reg-password').value;
+      const regCode = normalizeRegCode(document.getElementById('reg-code').value);
       const key = normalizeUsername(rawUser);
 
+      if (regCode.length !== 8) {
+        showAuthFeedback('يرجى كتابة كود التسجيل الصحيح (8 حروف وأرقام) الذي أعطاه لك المعلم.');
+        return;
+      }
       if (fullName.length < 3) {
         showAuthFeedback('يرجى كتابة الاسم الثلاثي للطالب بشكل واضح ليظهر في شهادة التقدير.');
         return;
@@ -2541,15 +2583,26 @@
         solvedPractice: [],
         examScore: null,
         examCorrectCount: null,
+        regCode: regCode,
         updatedAt: Date.now()
       };
 
       try {
+        // التسجيل وزيادة عدد استخدامات الكود يتمّان معًا في عملية واحدة، وقواعد Firebase ترفضها إن كان الكود خاطئًا أو معطّلًا أو استُخدم 3 مرات
+        const batch = cs.writeBatch(cs.db);
         const docRef = cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'students', key);
-        await cs.setDoc(docRef, newStudent);
+        const codeRef = cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'regcodes', regCode);
+        batch.set(docRef, newStudent);
+        batch.update(codeRef, { uses: cs.increment(1) });
+        await batch.commit();
       } catch (err) {
         try { if (cs.auth.currentUser) await cs.auth.currentUser.delete(); } catch (e) {}
-        showAuthFeedback('تعذر حفظ بيانات الطالب. حاول مرة أخرى.');
+        const ec = err && err.code ? err.code : '';
+        if (ec === 'permission-denied' || ec === 'not-found') {
+          showAuthFeedback('كود التسجيل غير صحيح، أو معطّل، أو استُخدم 3 مرات بالفعل. تأكد من الكود أو تواصل مع المعلم.');
+        } else {
+          showAuthFeedback('تعذر حفظ بيانات الطالب. حاول مرة أخرى.');
+        }
         return;
       }
 
@@ -2600,6 +2653,7 @@
       const cs = window.cloudStore;
       if (cs && cs.auth) { try { cs.signOut(cs.auth); } catch (e) {} }
       if (teacherUnsubscribe) { try { teacherUnsubscribe(); } catch (e) {} teacherUnsubscribe = null; }
+      if (regCodesUnsubscribe) { try { regCodesUnsubscribe(); } catch (e) {} regCodesUnsubscribe = null; regCodesRegistry = {}; }
       appState.currentUser = null;
       appState.isTeacherMode = false;
       appState.studentName = '';
@@ -2702,6 +2756,184 @@
       renderTeacherDashboard();
     }
 
+    /*************************************************************************
+     * أكواد التسجيل: كل كود يسمح بـ 3 تسجيلات كحد أقصى (يُفرض من قواعد Firebase)
+     *************************************************************************/
+    const REG_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let regCodesRegistry = {};
+    let regCodesUnsubscribe = null;
+    let regCodesError = '';
+
+    function normalizeRegCode(raw) {
+      return String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    }
+
+    function generateRegCodeString() {
+      const a = new Uint32Array(8);
+      crypto.getRandomValues(a);
+      let out = '';
+      for (const n of a) out += REG_CODE_ALPHABET[n % 32];
+      return out;
+    }
+
+    function startRegCodesListener() {
+      const cs = window.cloudStore;
+      if (!cs || !cs.ready || !cs.db || regCodesUnsubscribe) return;
+      try {
+        const colRef = cs.collection(cs.db, 'artifacts', cs.appId, 'public', 'data', 'regcodes');
+        regCodesUnsubscribe = cs.onSnapshot(
+          colRef,
+          (snapshot) => {
+            regCodesError = '';
+            regCodesRegistry = {};
+            snapshot.forEach((d) => { const v = d.data(); if (v) regCodesRegistry[d.id] = v; });
+            if (appState.isTeacherMode) renderRegCodes();
+          },
+          () => {
+            regCodesError = 'تعذر تحميل الأكواد. تأكد من نشر قواعد Firebase الجديدة ومن الاتصال بالإنترنت.';
+            if (appState.isTeacherMode) renderRegCodes();
+          }
+        );
+      } catch (e) {}
+    }
+
+    function regCodeFeedback(msg, ok) {
+      const fb = document.getElementById('rc-feedback');
+      if (!fb) return;
+      fb.textContent = msg;
+      fb.className = 'rounded-xl p-3 text-xs font-bold border ' + (ok ? 'bg-teal-50 text-teal-800 border-teal-200' : 'bg-rose-50 text-rose-800 border-rose-200');
+      fb.classList.remove('hidden');
+    }
+
+    async function teacherGenerateCodes(e) {
+      if (e) e.preventDefault();
+      const cs = window.cloudStore;
+      const n = parseInt(document.getElementById('rc-count').value, 10);
+      if (!n || n < 1 || n > 100) { regCodeFeedback('اكتب عددًا من 1 إلى 100.', false); return; }
+      if (!cs || !cs.ready || !cs.db || !cs.auth || !cs.auth.currentUser) { regCodeFeedback('تعذر الاتصال بالسحابة. تحقق من الإنترنت.', false); return; }
+      const batch = cs.writeBatch(cs.db);
+      const made = new Set();
+      while (made.size < n) {
+        const c = generateRegCodeString();
+        if (regCodesRegistry[c] || made.has(c)) continue;
+        made.add(c);
+        batch.set(cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'regcodes', c), {
+          code: c, uses: 0, max: 3, disabled: false, label: '', createdAt: Date.now()
+        });
+      }
+      try {
+        await batch.commit();
+        regCodeFeedback('تم إنشاء ' + n + ' كود جديد.', true);
+      } catch (err) {
+        regCodeFeedback('تعذر إنشاء الأكواد. تأكد من نشر قواعد Firebase الجديدة.', false);
+      }
+    }
+
+    async function teacherSetCodeLabel(code, value) {
+      const cs = window.cloudStore;
+      try {
+        await cs.updateDoc(cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'regcodes', code), { label: String(value || '').trim().slice(0, 80) });
+      } catch (err) { regCodeFeedback('تعذر حفظ اسم الطالب.', false); }
+    }
+
+    async function teacherToggleCode(code) {
+      const cs = window.cloudStore;
+      const cur = regCodesRegistry[code];
+      if (!cur) return;
+      try {
+        await cs.updateDoc(cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'regcodes', code), { disabled: !cur.disabled });
+      } catch (err) { regCodeFeedback('تعذر تغيير حالة الكود.', false); }
+    }
+
+    async function teacherDeleteCode(code) {
+      if (!window.confirm('حذف الكود ' + code + ' نهائيًا؟ لن يعمل بعد الآن.')) return;
+      const cs = window.cloudStore;
+      try {
+        await cs.deleteDoc(cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'regcodes', code));
+      } catch (err) { regCodeFeedback('تعذر حذف الكود.', false); }
+    }
+
+    async function copyTextToClipboard(text) {
+      try { await navigator.clipboard.writeText(text); return true; } catch (e) {}
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return ok;
+      } catch (e) { return false; }
+    }
+
+    async function copyRegCode(code) {
+      const ok = await copyTextToClipboard(code);
+      regCodeFeedback(ok ? 'تم نسخ الكود ' + code : 'تعذر النسخ، انسخ الكود يدويًا.', ok);
+    }
+
+    async function copyAllRegCodes() {
+      const rows = sortedRegCodes().filter(c => !c.disabled).map(c => (c.label ? c.label + ': ' : '') + c.code);
+      const ok = await copyTextToClipboard(rows.join('\n'));
+      regCodeFeedback(ok ? 'تم نسخ ' + rows.length + ' كود.' : 'تعذر النسخ.', ok);
+    }
+
+    function sortedRegCodes() {
+      return Object.values(regCodesRegistry).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0) || String(a.code).localeCompare(String(b.code)));
+    }
+
+    function exportRegCodesCsv() {
+      const q = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+      const lines = [['الكود', 'اسم الطالب', 'الاستخدامات', 'الحد الأقصى', 'الحالة'].map(q).join(',')];
+      sortedRegCodes().forEach(c => {
+        const state = c.disabled ? 'معطّل' : ((c.uses || 0) >= (c.max || 3) ? 'مستخدم بالكامل' : 'متاح');
+        lines.push([c.code, c.label || '', c.uses || 0, c.max || 3, state].map(q).join(','));
+      });
+      const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'registration-codes.csv';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function renderRegCodes() {
+      const el = document.getElementById('rc-list');
+      if (!el) return;
+      const codes = sortedRegCodes();
+      const total = codes.length;
+      const avail = codes.filter(c => !c.disabled && (c.uses || 0) < (c.max || 3)).length;
+      const sum = document.getElementById('rc-summary');
+      if (sum) sum.textContent = total + ' كود | متاح: ' + avail;
+      if (regCodesError) {
+        el.innerHTML = '<div class="rounded-xl p-3 text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200">' + escapeHtml(regCodesError) + '</div>';
+        return;
+      }
+      if (!codes.length) {
+        el.innerHTML = '<div class="text-xs text-slate-500 font-bold p-3">لا توجد أكواد بعد. اكتب العدد واضغط «إنشاء».</div>';
+        return;
+      }
+      const usersByCode = {};
+      Object.values(studentsRegistry).forEach(s => { if (s && s.regCode) { (usersByCode[s.regCode] = usersByCode[s.regCode] || []).push(s.username); } });
+      el.innerHTML = '<div class="overflow-x-auto"><table class="w-full text-xs sm:text-sm text-right"><thead><tr class="text-slate-500 border-b border-slate-200 dark:border-slate-700">' +
+        '<th class="py-2 px-2">الكود</th><th class="py-2 px-2">اسم الطالب</th><th class="py-2 px-2">الاستخدام</th><th class="py-2 px-2">الحالة</th><th class="py-2 px-2">إجراءات</th></tr></thead><tbody>' +
+        codes.map(c => {
+          const uses = c.uses || 0, max = c.max || 3;
+          const full = uses >= max;
+          const state = c.disabled ? '<span class="text-rose-600 font-extrabold">معطّل</span>' : (full ? '<span class="text-amber-600 font-extrabold">مكتمل</span>' : '<span class="text-teal-600 font-extrabold">متاح</span>');
+          const who = (usersByCode[c.code] || []).map(escapeHtml).join('، ');
+          const btn = 'px-2.5 py-1 rounded-lg text-[11px] font-extrabold border ';
+          return '<tr class="border-b border-slate-100 dark:border-slate-700/60">' +
+            '<td class="py-2 px-2 font-mono font-extrabold tracking-widest" dir="ltr">' + escapeHtml(c.code) + '</td>' +
+            '<td class="py-2 px-2"><input type="text" value="' + escapeHtml(c.label || '') + '" maxlength="80" placeholder="اسم الطالب" onchange="teacherSetCodeLabel(\'' + escapeHtml(c.code) + '\', this.value)" class="w-full min-w-[8rem] px-2 py-1 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-xs font-bold"></td>' +
+            '<td class="py-2 px-2 font-bold whitespace-nowrap">' + uses + ' / ' + max + (who ? '<div class="text-[10px] text-slate-500 font-normal" dir="ltr">' + who + '</div>' : '') + '</td>' +
+            '<td class="py-2 px-2">' + state + '</td>' +
+            '<td class="py-2 px-2 whitespace-nowrap space-x-1 space-x-reverse">' +
+              '<button type="button" onclick="copyRegCode(\'' + escapeHtml(c.code) + '\')" class="' + btn + 'border-blue-300 text-blue-700">نسخ</button> ' +
+              '<button type="button" onclick="teacherToggleCode(\'' + escapeHtml(c.code) + '\')" class="' + btn + 'border-amber-300 text-amber-700">' + (c.disabled ? 'تفعيل' : 'تعطيل') + '</button> ' +
+              '<button type="button" onclick="teacherDeleteCode(\'' + escapeHtml(c.code) + '\')" class="' + btn + 'border-rose-300 text-rose-700">حذف</button>' +
+            '</td></tr>';
+        }).join('') + '</tbody></table></div>';
+    }
+
     async function deleteStudentAccount(usernameKey) {
       delete studentsRegistry[usernameKey];
       saveLocalRegistry(studentsRegistry);
@@ -2718,6 +2950,7 @@
     function renderTeacherDashboard() {
       const listEl = document.getElementById('td-students-list');
       if (!listEl) return;
+      try { renderRegCodes(); } catch (e) {}
       const query = (document.getElementById('td-search-input')?.value || '').trim().toLowerCase();
 
       const allStudents = Object.values(studentsRegistry).filter(s => s && s.username !== 'mr_walid_preview');
