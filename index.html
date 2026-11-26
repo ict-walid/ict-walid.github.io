@@ -40,7 +40,7 @@
   <!-- ===================================================================== -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, writeBatch, updateDoc, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     /**
@@ -81,7 +81,8 @@
       createUserWithEmailAndPassword,
       signInWithEmailAndPassword,
       signOut,
-      onAuthStateChanged
+      onAuthStateChanged,
+      sendPasswordResetEmail
     };
 
     async function initCloudServices() {
@@ -350,7 +351,7 @@
         </div>
         <h2 class="text-2xl sm:text-3xl font-extrabold">بوابة دخول الطلاب</h2>
         <p class="text-xs sm:text-sm text-blue-100">
-          سجّل دخولك باسم المستخدم وكلمة المرور لحفظ تقدمك في الدروس ودرجاتك في الاختبار وشهادة التقدير الخاصة بك.
+          سجّل دخولك بالبريد الإلكتروني وكلمة المرور لحفظ تقدمك في الدروس ودرجاتك في الاختبار وشهادة التقدير الخاصة بك.
         </p>
       </div>
 
@@ -375,13 +376,14 @@
         <form id="form-student-login" onsubmit="handleStudentLogin(event)" class="space-y-4">
           <div>
             <label for="login-username" class="block text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1.5">
-              اسم المستخدم أو كود الطالب:
+              البريد الإلكتروني (Gmail):
             </label>
-            <input               type="text"
+            <input               type="email"
               id="login-username"
               required
-              autocomplete="username"
-              placeholder="مثال: ahmed2026"
+              dir="ltr"
+              autocomplete="email"
+              placeholder="مثال: ahmed@gmail.com"
               class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-blue-600"
             >
           </div>
@@ -402,6 +404,10 @@
                 👁️
               </button>
             </div>
+          </div>
+
+          <div class="text-left">
+            <button type="button" onclick="handleForgotPassword()" class="text-xs font-extrabold text-blue-700 dark:text-blue-300 hover:underline">نسيت كلمة المرور؟</button>
           </div>
 
           <button type="submit" id="btn-submit-login" class="w-full py-3.5 rounded-2xl bg-gradient-to-l from-blue-800 to-teal-700 hover:from-blue-700 hover:to-teal-600 text-white font-extrabold text-sm sm:text-base shadow-md transition">
@@ -442,20 +448,22 @@
           </div>
 
           <div>
-            <label for="reg-username" class="block text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1.5">
-              اختر اسم مستخدم أو كود خاص بك (حروف أو أرقام):
+            <label for="reg-email" class="block text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1.5">
+              بريدك الإلكتروني (Gmail) الذي ستدخل به وتستعيد به كلمة المرور:
             </label>
-            <input               type="text"
-              id="reg-username"
+            <input               type="email"
+              id="reg-email"
               required
-              placeholder="مثال: ahmed2026"
+              dir="ltr"
+              autocomplete="email"
+              placeholder="مثال: ahmed@gmail.com"
               class="w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold text-slate-900 dark:text-white focus:outline-none focus:border-blue-600"
             >
           </div>
 
           <div>
             <label for="reg-password" class="block text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1.5">
-              اختر كلمة مرور قوية (8 أحرف على الأقل، فيها حرف كبير وحرف صغير ورقم ورمز مثل @ أو #):
+              اختر كلمة مرور خاصة بالموقع (ليست كلمة مرور الجيميل!) - 8 أحرف على الأقل، فيها حرف كبير وحرف صغير ورقم ورمز مثل @ أو #:
             </label>
             <div class="relative">
               <input                 type="password"
@@ -516,7 +524,7 @@
           <li>أسئلة متدرجة المستوى للتدرب بعد كل درس.</li>
           <li>اختبار نهائي وشهادة تقدير، مع حفظ تقدم كل طالب ودرجاته.</li>
         </ul>
-        <p>الدخول للطلاب المسجلين: أدخل اسم المستخدم وكلمة المرور أعلاه، أو أنشئ حساب طالب جديد من تبويب "حساب طالب جديد".</p>
+        <p>الدخول للطلاب المسجلين: أدخل بريدك الإلكتروني وكلمة المرور أعلاه، أو أنشئ حساب طالب جديد من تبويب "حساب طالب جديد".</p>
       </section>
     </section>
 
@@ -584,11 +592,11 @@
 
       <!-- إضافة حساب طالب جديد من قبل المعلم -->
       <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 sm:p-6 border border-slate-200 dark:border-slate-700 shadow-sm space-y-4">
-        <h3 class="text-lg font-extrabold text-slate-900 dark:text-white">➕ إنشاء حساب طالب جديد (اسم مستخدم وكلمة مرور)</h3>
+        <h3 class="text-lg font-extrabold text-slate-900 dark:text-white">➕ إنشاء حساب طالب جديد (بريد إلكتروني وكلمة مرور)</h3>
         <div id="td-add-feedback" class="hidden rounded-xl p-3 text-xs font-bold"></div>
         <form onsubmit="teacherCreateStudent(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <input type="text" id="td-new-fullname" required placeholder="اسم الطالب الثلاثي" class="px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold" >
-          <input type="text" id="td-new-username" required placeholder="اسم المستخدم / الكود" class="px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold" >
+          <input type="text" id="td-new-username" required placeholder="البريد الإلكتروني للطالب" dir="ltr" class="px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold" >
           <input type="text" id="td-new-password" required minlength="8" placeholder="كلمة المرور للطالب" class="px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-sm font-bold" >
           <button type="submit" class="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-sm transition">
             إضافة الطالب ✓
@@ -2304,8 +2312,7 @@
               applyTeacherSession();
               return;
             }
-            if (!email.endsWith(STUDENT_EMAIL_DOMAIN)) return;
-            const key = normalizeUsername(email.slice(0, -STUDENT_EMAIL_DOMAIN.length));
+            const key = user.uid;
             if (!key) return;
             const docRef = cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'students', key);
             const snap = await cs.getDoc(docRef);
@@ -2322,7 +2329,8 @@
 
     async function persistStudentRecord(record) {
       if (!record || !record.username) return;
-      const key = normalizeUsername(record.username);
+      const cs0 = window.cloudStore;
+      const key = (cs0 && cs0.auth && cs0.auth.currentUser) ? cs0.auth.currentUser.uid : normalizeUsername(record.username);
       if (!key) return;
       studentsRegistry[key] = { ...record, updatedAt: Date.now() };
       saveLocalRegistry(studentsRegistry);
@@ -2473,15 +2481,18 @@
       el.type = el.type === 'password' ? 'text' : 'password';
     }
 
+    function isValidEmail(v) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+    }
+
     async function handleStudentLogin(e) {
       e.preventDefault();
       hideAuthFeedback();
-      const rawUser = document.getElementById('login-username').value;
+      const email = String(document.getElementById('login-username').value || '').trim().toLowerCase();
       const password = document.getElementById('login-password').value;
-      const key = normalizeUsername(rawUser);
 
-      if (!key) {
-        showAuthFeedback('يرجى إدخال اسم مستخدم أو كود طالب صحيح.');
+      if (!isValidEmail(email)) {
+        showAuthFeedback('يرجى كتابة بريدك الإلكتروني بشكل صحيح.');
         return;
       }
 
@@ -2492,13 +2503,13 @@
       }
 
       try {
-        await cs.signInWithEmailAndPassword(cs.auth, studentEmailFor(key), password);
+        await cs.signInWithEmailAndPassword(cs.auth, email, password);
       } catch (err) {
         const code = err && err.code ? err.code : '';
         if (code === 'auth/user-not-found' || code === 'auth/invalid-email') {
-          showAuthFeedback('اسم المستخدم غير مسجل. يمكنك الضغط على تبويب «حساب طالب جديد» لإنشاء حسابك في ثوانٍ.');
+          showAuthFeedback('هذا البريد غير مسجل. يمكنك الضغط على تبويب «حساب طالب جديد» لإنشاء حسابك بكود التسجيل.');
         } else if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
-          showAuthFeedback('كلمة المرور غير صحيحة. تأكد منها وحاول مرة أخرى.');
+          showAuthFeedback('البريد أو كلمة المرور غير صحيحة. تأكد منهما، أو اضغط «نسيت كلمة المرور؟».');
         } else if (code === 'auth/too-many-requests') {
           showAuthFeedback('محاولات دخول كثيرة متتالية. انتظر دقيقة ثم حاول مرة أخرى.');
         } else {
@@ -2508,10 +2519,11 @@
       }
 
       try {
+        const key = cs.auth.currentUser.uid;
         const docRef = cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'students', key);
         const snap = await cs.getDoc(docRef);
         if (!snap.exists()) {
-          showAuthFeedback('اسم المستخدم غير مسجل. يمكنك الضغط على تبويب «حساب طالب جديد» لإنشاء حسابك في ثوانٍ.');
+          showAuthFeedback('حسابك غير مفعّل على المنصة. تواصل مع المعلم.');
           try { await cs.signOut(cs.auth); } catch (e) {}
           return;
         }
@@ -2521,6 +2533,33 @@
         applyStudentSession(student);
       } catch (err) {
         showAuthFeedback('تعذر تحميل بيانات الطالب. حاول مرة أخرى.');
+      }
+    }
+
+    async function handleForgotPassword() {
+      hideAuthFeedback();
+      const email = String(document.getElementById('login-username').value || '').trim().toLowerCase();
+      if (!isValidEmail(email)) {
+        showAuthFeedback('اكتب بريدك الإلكتروني في خانة البريد أولًا، ثم اضغط «نسيت كلمة المرور؟».');
+        return;
+      }
+      const cs = window.cloudStore;
+      if (!cs || !cs.ready || !cs.auth) {
+        showAuthFeedback('تعذر الاتصال بالسحابة. تحقق من الإنترنت وحاول مرة أخرى.');
+        return;
+      }
+      try {
+        await cs.sendPasswordResetEmail(cs.auth, email);
+        showAuthFeedback('إذا كان هذا البريد مسجلًا لدينا فستصلك رسالة بها رابط لتغيير كلمة المرور. افحص صندوق الوارد ومجلد الرسائل غير المرغوبة (Spam).', false);
+      } catch (err) {
+        const code = err && err.code ? err.code : '';
+        if (code === 'auth/too-many-requests') {
+          showAuthFeedback('طلبات كثيرة. انتظر قليلًا ثم حاول مرة أخرى.');
+        } else if (code === 'auth/invalid-email') {
+          showAuthFeedback('البريد الإلكتروني غير صحيح.');
+        } else {
+          showAuthFeedback('تعذر إرسال رسالة الاستعادة الآن. حاول مرة أخرى.');
+        }
       }
     }
 
@@ -2540,10 +2579,9 @@
       e.preventDefault();
       hideAuthFeedback();
       const fullName = (document.getElementById('reg-fullname').value || '').trim();
-      const rawUser = document.getElementById('reg-username').value;
+      const email = String(document.getElementById('reg-email').value || '').trim().toLowerCase();
       const password = document.getElementById('reg-password').value;
       const regCode = normalizeRegCode(document.getElementById('reg-code').value);
-      const key = normalizeUsername(rawUser);
 
       if (regCode.length !== 8) {
         showAuthFeedback('يرجى كتابة كود التسجيل الصحيح (8 حروف وأرقام) الذي أعطاه لك المعلم.');
@@ -2553,8 +2591,8 @@
         showAuthFeedback('يرجى كتابة الاسم الثلاثي للطالب بشكل واضح ليظهر في شهادة التقدير.');
         return;
       }
-      if (!/^[a-z0-9_-]{3,20}$/.test(key)) {
-        showAuthFeedback('اسم المستخدم يجب أن يكون من 3 إلى 20 حرفًا إنجليزيًا صغيرًا أو رقمًا بدون مسافات (a-z و 0-9 و - و _).');
+      if (!isValidEmail(email)) {
+        showAuthFeedback('يرجى كتابة بريدك الإلكتروني بشكل صحيح (مثال: ahmed@gmail.com).');
         return;
       }
       if (!isStrongPassword(password)) {
@@ -2568,12 +2606,16 @@
         return;
       }
 
+      let uid = '';
       try {
-        await cs.createUserWithEmailAndPassword(cs.auth, studentEmailFor(key), password);
+        const cred = await cs.createUserWithEmailAndPassword(cs.auth, email, password);
+        uid = cred.user.uid;
       } catch (err) {
         const code = err && err.code ? err.code : '';
         if (code === 'auth/email-already-in-use') {
-          showAuthFeedback('اسم المستخدم هذا مسجل لطالب آخر بالفعل، يرجى اختيار كود أو اسم مستخدم مختلف.');
+          showAuthFeedback('هذا البريد مسجل بالفعل. اضغط «تسجيل الدخول»، أو «نسيت كلمة المرور؟» إن نسيتها.');
+        } else if (code === 'auth/invalid-email') {
+          showAuthFeedback('البريد الإلكتروني غير صحيح.');
         } else if (code === 'auth/weak-password') {
           showAuthFeedback(PASSWORD_RULE_MSG);
         } else {
@@ -2583,7 +2625,9 @@
       }
 
       const newStudent = {
-        username: key,
+        uid: uid,
+        username: email,
+        email: email,
         fullName: fullName,
         completedLessons: [],
         masteredCards: [],
@@ -2597,7 +2641,7 @@
       try {
         // التسجيل وزيادة عدد استخدامات الكود يتمّان معًا في عملية واحدة، وقواعد Firebase ترفضها إن كان الكود خاطئًا أو معطّلًا أو استُخدم 3 مرات
         const batch = cs.writeBatch(cs.db);
-        const docRef = cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'students', key);
+        const docRef = cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'students', uid);
         const codeRef = cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'regcodes', regCode);
         batch.set(docRef, newStudent);
         batch.update(codeRef, { uses: cs.increment(1) });
@@ -2605,7 +2649,7 @@
       } catch (err) {
         try { if (cs.auth.currentUser) await cs.auth.currentUser.delete(); } catch (e) {}
         appState.currentUser = null;
-        delete studentsRegistry[key];
+        delete studentsRegistry[uid];
         saveLocalRegistry(studentsRegistry);
         const ec = err && err.code ? err.code : '';
         if (ec === 'permission-denied' || ec === 'not-found') {
@@ -2616,12 +2660,10 @@
         return;
       }
 
-      studentsRegistry[key] = newStudent;
+      studentsRegistry[uid] = newStudent;
       saveLocalRegistry(studentsRegistry);
       applyStudentSession(newStudent);
     }
-
-    
 
     async function handleTeacherLogin(e) {
       e.preventDefault();
@@ -2704,63 +2746,58 @@
       e.preventDefault();
       const fb = document.getElementById('td-add-feedback');
       const fullName = (document.getElementById('td-new-fullname').value || '').trim();
-      const key = normalizeUsername(document.getElementById('td-new-username').value);
+      const email = String(document.getElementById('td-new-username').value || '').trim().toLowerCase();
       const password = (document.getElementById('td-new-password').value || '').trim();
-
-      if (!fullName || key.length < 3 || !isStrongPassword(password)) {
-        fb.textContent = 'تأكد من إدخال اسم الطالب وكود لا يقل عن 3 أحرف. ' + PASSWORD_RULE_MSG;
+      const showErr = (msg) => {
+        fb.textContent = msg;
         fb.className = 'rounded-xl p-3 text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200';
         fb.classList.remove('hidden');
-        return;
-      }
+      };
 
-      if (studentsRegistry[key]) {
-        fb.textContent = 'هذا الكود / اسم المستخدم مستخدم بالفعل لطالب آخر.';
-        fb.className = 'rounded-xl p-3 text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200';
-        fb.classList.remove('hidden');
+      if (!fullName || !isValidEmail(email) || !isStrongPassword(password)) {
+        showErr('تأكد من إدخال اسم الطالب وبريد إلكتروني صحيح. ' + PASSWORD_RULE_MSG);
         return;
       }
 
       const cs = window.cloudStore;
       if (!cs || !cs.ready || !cs.auth) {
-        fb.textContent = 'تعذر الاتصال بالسحابة. تحقق من الإنترنت وحاول مرة أخرى.';
-        fb.className = 'rounded-xl p-3 text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200';
-        fb.classList.remove('hidden');
+        showErr('تعذر الاتصال بالسحابة. تحقق من الإنترنت وحاول مرة أخرى.');
         return;
       }
 
-      const record = {
-        username: key,
-        fullName,
-        completedLessons: [],
-        masteredCards: [],
-        solvedPractice: [],
-        examScore: null,
-        examCorrectCount: null,
-        updatedAt: Date.now()
-      };
-
+      let uid = '';
       try {
         const secondaryApp = cs.initializeApp(cs.firebaseConfig, 'teacher-admin-' + Date.now());
         const secondaryAuth = cs.getAuth(secondaryApp);
-        await cs.createUserWithEmailAndPassword(secondaryAuth, studentEmailFor(key), password);
+        const cred = await cs.createUserWithEmailAndPassword(secondaryAuth, email, password);
+        uid = cred.user.uid;
         await cs.signOut(secondaryAuth);
-        const docRef = cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'students', key);
+        const record = {
+          uid: uid,
+          username: email,
+          email: email,
+          fullName,
+          completedLessons: [],
+          masteredCards: [],
+          solvedPractice: [],
+          examScore: null,
+          examCorrectCount: null,
+          updatedAt: Date.now()
+        };
+        const docRef = cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'students', uid);
         await cs.setDoc(docRef, record);
       } catch (err) {
         const code = err && err.code ? err.code : '';
-        fb.textContent = code === 'auth/email-already-in-use'
-          ? 'هذا الكود / اسم المستخدم مستخدم بالفعل لطالب آخر.'
-          : 'تعذر إنشاء الحساب. تحقق من الإنترنت وحاول مرة أخرى.';
-        fb.className = 'rounded-xl p-3 text-xs font-bold bg-rose-50 text-rose-800 border border-rose-200';
-        fb.classList.remove('hidden');
+        showErr(code === 'auth/email-already-in-use'
+          ? 'هذا البريد مسجل بالفعل لطالب آخر.'
+          : 'تعذر إنشاء الحساب. تحقق من الإنترنت وحاول مرة أخرى.');
         return;
       }
       document.getElementById('td-new-fullname').value = '';
       document.getElementById('td-new-username').value = '';
       document.getElementById('td-new-password').value = '';
 
-      fb.textContent = `تم إنشاء حساب الطالب «${fullName}» بنجاح (الكود: ${key} | كلمة المرور: ${password}).`;
+      fb.textContent = `تم إنشاء حساب الطالب «${fullName}» بنجاح (البريد: ${email} | كلمة المرور: ${password}).`;
       fb.className = 'rounded-xl p-3 text-xs font-bold bg-teal-50 text-teal-800 border border-teal-200';
       fb.classList.remove('hidden');
       renderTeacherDashboard();
@@ -2945,6 +2982,7 @@
     }
 
     async function deleteStudentAccount(usernameKey) {
+      if (!usernameKey) return;
       delete studentsRegistry[usernameKey];
       saveLocalRegistry(studentsRegistry);
       const cs = window.cloudStore;
@@ -2994,7 +3032,7 @@
             <div class="space-y-1">
               <div class="flex flex-wrap items-center gap-2">
                 <span class="font-extrabold text-base text-slate-900 dark:text-white">${escapeHtml(st.fullName || st.username)}</span>
-                <span class="px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 text-xs font-mono font-bold" dir="ltr">@${escapeHtml(st.username)}</span>
+                <span class="px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-200 text-xs font-mono font-bold" dir="ltr">${escapeHtml(st.username)}</span>
                 ${isHonor ? `<span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-xs font-extrabold">🏆 مستحق للشهادة (${correctCnt}/20)</span>` : ''}
               </div>
               <div class="text-xs text-slate-600 dark:text-slate-300 flex flex-wrap gap-3">
@@ -3003,7 +3041,7 @@
                 <span>الاختبار النهائي: <strong>${hasExam ? `${correctCnt}/20 (${st.examScore}%)` : 'لم يختبر بعد'}</strong></span>
               </div>
             </div>
-            <button onclick="deleteStudentAccount('${escapeHtml(st.username)}')" class="px-3 py-1.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-extrabold shrink-0 transition">
+            <button onclick="deleteStudentAccount('${escapeHtml(st.uid || '')}')" class="px-3 py-1.5 rounded-xl bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs font-extrabold shrink-0 transition">
                 حذف الحساب
               </button>
           </div>
