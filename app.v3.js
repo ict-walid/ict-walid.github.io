@@ -2213,10 +2213,11 @@
       if (n === 2) { switchTab('term2'); }
       else { switchTab(appState.lastTerm1Tab || 'home'); }
     }
+    function t2Unlocked() { return !!(appState.term2Open || appState.isTeacherMode || (appState.currentUser && appState.currentUser.username === 'mr_walid_preview')); }
     function renderTerm2() {
       const sec = document.getElementById('section-term2');
       if (!sec) return;
-      if (!appState.term2Open) {
+      if (!t2Unlocked()) {
         sec.innerHTML = `<div class="rounded-3xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-8 sm:p-12 text-center space-y-3 shadow-sm">
           <div class="text-5xl">🔒</div>
           <h2 class="text-xl sm:text-2xl font-extrabold text-blue-950 dark:text-white">الترم التاني قريبًا</h2>
@@ -2229,7 +2230,7 @@
     /*************************************************************************
      * محتوى الترم التاني (يتحمّل من Firestore فقط لما الترم يتفتح)
      *************************************************************************/
-    const T2 = { cache: {}, view: 'lessons', lesson: null, qi: 0, score: 0, answered: false, quizSet: null, flashI: 0, flashShow: false, err: null };
+    const T2 = { cache: {}, view: 'map', qmode: 'practice', labSim: null, lesson: null, qi: 0, score: 0, answered: false, quizSet: null, flashI: 0, flashShow: false, err: null };
     const t2esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     async function t2Load(id) {
       if (T2.cache[id]) return T2.cache[id];
@@ -2274,10 +2275,18 @@
       return o;
     }
     function t2Tabs() {
-      const mk = (k, l) => `<button onclick="t2Go('${k}')" class="px-3 py-2 rounded-xl text-sm font-extrabold ${T2.view === k ? 'bg-blue-700 text-white' : 'bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600'}">${l}</button>`;
-      return `<div class="flex flex-wrap gap-2 justify-center">${mk('lessons', '📚 الدروس')}${mk('flash', '🗂️ البطاقات')}${mk('practice', '✍️ تدريب')}${mk('exam', '🎓 الامتحان')}</div>`;
+      const cur = T2.view;
+      const mk = (k, l) => `<button onclick="t2Go('${k}')" class="px-3 py-2 rounded-xl text-xs sm:text-sm font-extrabold whitespace-nowrap ${cur === k ? 'bg-blue-700 text-white' : 'bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600'}">${l}</button>`;
+      return `<div class="flex flex-wrap gap-2 justify-center">${mk('map', '🗺️ خريطة المنهج')}${mk('explain', '📖 الشرح التفاعلي')}${mk('gloss', '📕 قاموس المصطلحات')}${mk('lab', '🧪 المختبر والمحاكاة')}${mk('flash', '🗂️ بطاقات المراجعة')}${mk('quiz', '✍️ الأسئلة والاختبار')}</div>`;
     }
-    function t2Go(v, l) { T2.view = v; T2.lesson = l || null; T2.qi = 0; T2.score = 0; T2.answered = false; T2.quizSet = null; T2.flashI = 0; T2.flashShow = false; renderTerm2(); window.scrollTo(0, 0); }
+    function t2Go(v, l) {
+      if (v === 'lessons') v = l ? 'explain' : 'map';
+      if (v === 'practice' || v === 'exam') { T2.qmode = v; v = 'quiz'; }
+      if (v === 'quiz' && !T2.qmode) T2.qmode = 'practice';
+      T2.view = v; T2.lesson = l || null; T2.qi = 0; T2.score = 0; T2.answered = false; T2.quizSet = null; T2.flashI = 0; T2.flashShow = false;
+      if (v !== 'lab') T2.labSim = null;
+      renderTerm2(); window.scrollTo(0, 0);
+    }
     function t2Answer(i) {
       if (T2.answered) return; T2.answered = true;
       const q = T2.quizSet[T2.qi]; if (i === q.correct) T2.score++; T2.pick = i; renderTerm2();
@@ -2285,45 +2294,233 @@
     function t2Next() { T2.qi++; T2.answered = false; renderTerm2(); }
     function t2Quiz(set, title) {
       const q = set[T2.qi];
-      if (!q) return `<div class="${t2card} text-center"><div class="text-5xl">🏁</div><h3 class="text-xl font-extrabold">${t2esc(title)}: خلصت</h3><p class="text-lg font-bold">النتيجة ${T2.score} من ${set.length}</p><button onclick="t2Go('${T2.view}', ${T2.lesson ? "'" + T2.lesson + "'" : 'null'})" class="px-4 py-2 rounded-xl bg-blue-700 text-white font-bold">ابدأ من جديد</button></div>`;
+      if (!q) return `<div class="${t2card} text-center"><div class="text-5xl">🏁</div><h3 class="text-xl font-extrabold">${t2esc(title)}: خلصت</h3><p class="text-lg font-bold">النتيجة ${T2.score} من ${set.length}</p><button onclick="t2Go('${T2.qmode}', ${T2.lesson ? "'" + T2.lesson + "'" : 'null'})" class="px-4 py-2 rounded-xl bg-blue-700 text-white font-bold">ابدأ من جديد</button></div>`;
       return `<div class="${t2card}"><div class="text-xs font-bold text-slate-500">${t2esc(title)} · سؤال ${T2.qi + 1} من ${set.length}</div><p class="text-base sm:text-lg font-bold leading-8">${t2esc(q.q)}</p>
         <div class="space-y-2">${q.options.map((o, i) => { let c = 'border-slate-300 dark:border-slate-600'; if (T2.answered) { if (i === q.correct) c = 'border-green-600 bg-green-50 dark:bg-green-950/40'; else if (i === T2.pick) c = 'border-rose-600 bg-rose-50 dark:bg-rose-950/40'; } return `<button ${T2.answered ? 'disabled' : ''} onclick="t2Answer(${i})" class="w-full text-right p-3 rounded-xl border-2 text-sm leading-7 ${c}">${t2esc(o)}</button>`; }).join('')}</div>
         ${T2.answered ? `<div class="rounded-xl bg-slate-50 dark:bg-slate-700 p-3 text-sm leading-7">${T2.pick === q.correct ? '✅ صح. ' : '❌ غلط. '}${t2esc(q.why)}</div><button onclick="t2Next()" class="px-4 py-2 rounded-xl bg-blue-700 text-white font-bold">التالي</button>` : ''}</div>`;
     }
+    /* ---------- القاموس التفاعلي ---------- */
+    function t2GlossFilter() {
+      const q = (document.getElementById('t2-gq') || {}).value || '';
+      const ls = (document.getElementById('t2-gl') || {}).value || '';
+      const needle = q.trim().toLowerCase();
+      let n = 0;
+      document.querySelectorAll('#t2-glist details').forEach(el => {
+        const ok = (!ls || el.dataset.l === ls) && (!needle || el.dataset.s.indexOf(needle) >= 0);
+        el.style.display = ok ? '' : 'none'; if (ok) n++;
+      });
+      const c = document.getElementById('t2-gc'); if (c) c.textContent = n + ' مصطلح';
+    }
+    function t2Gloss(f, idx) {
+      const lessons = idx.chapters.flatMap(c => c.lessons);
+      const opts = lessons.map(l => `<option value="${l.id}">الدرس ${l.id}: ${t2esc(l.title)}</option>`).join('');
+      const items = f.map(x => `<details data-l="${t2esc(x[0])}" data-s="${t2esc((x[1] + ' ' + x[2]).toLowerCase())}" class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3"><summary class="cursor-pointer font-extrabold text-blue-900 dark:text-blue-200">${t2esc(x[1])} <span class="text-xs font-bold text-slate-500">· الدرس ${t2esc(x[0])}</span></summary><p class="mt-2 text-sm leading-8">${t2esc(x[2])}</p></details>`).join('');
+      return `<div class="${t2card}"><h3 class="text-lg font-extrabold">📕 قاموس المصطلحات</h3><p class="text-sm text-slate-600 dark:text-slate-300">ابحث عن أي مصطلح أو اختار درس، واضغط على المصطلح تشوف معناه.</p>
+        <div class="grid gap-2 sm:grid-cols-2"><input id="t2-gq" oninput="t2GlossFilter()" placeholder="ابحث هنا..." class="p-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm"><select id="t2-gl" onchange="t2GlossFilter()" class="p-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm"><option value="">كل الدروس</option>${opts}</select></div>
+        <div id="t2-gc" class="text-xs font-bold text-slate-500">${f.length} مصطلح</div><div id="t2-glist" class="space-y-2">${items}</div></div>`;
+    }
+    /* ---------- المختبر والمحاكاة ---------- */
+    const t2in = 'w-full accent-blue-700';
+    const t2btn = 'px-3 py-2 rounded-xl bg-blue-700 text-white text-sm font-bold';
+    const t2btn2 = 'px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 text-sm font-bold';
+    const t2sl = (id, label, min, max, step, val) => `<label class="block text-sm font-bold">${label}: <span id="${id}-v" class="text-blue-700 dark:text-blue-300">${val}</span><input id="${id}" type="range" min="${min}" max="${max}" step="${step}" value="${val}" class="${t2in}"></label>`;
+    const t2g = (id) => document.getElementById(id);
+    const t2v = (id) => parseFloat(t2g(id).value);
+    function t2Seed(s) { return function () { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; }; }
+    function t2Lab(lab) {
+      if (!T2.labSim) {
+        return `<div class="${t2card}"><h3 class="text-lg font-extrabold">🧪 المختبر والمحاكاة</h3><p class="text-sm leading-8">${t2esc(lab.intro)}</p></div>` + `<div class="grid gap-3 sm:grid-cols-2">${lab.order.map(k => { const s = lab.sims[k]; return `<button onclick="T2.labSim='${k}';renderTerm2();window.scrollTo(0,0)" class="${t2card} text-right hover:bg-blue-50 dark:hover:bg-slate-700"><div class="text-3xl">${s.icon}</div><div class="font-extrabold text-blue-900 dark:text-blue-200">${t2esc(s.title)}</div><div class="text-xs text-slate-600 dark:text-slate-300 leading-6">${t2esc(s.desc)}</div></button>`; }).join('')}</div>`;
+      }
+      const k = T2.labSim, s = lab.sims[k];
+      const head = `<button onclick="T2.labSim=null;renderTerm2()" class="${t2btn2}">→ كل المحاكاة</button><div class="${t2card}"><div class="text-3xl">${s.icon}</div><h3 class="text-lg font-extrabold">${t2esc(s.title)}</h3><p class="text-sm leading-8">${t2esc(s.desc)}</p><div class="rounded-xl bg-blue-50 dark:bg-slate-700 p-3 text-sm leading-8">🎯 ${t2esc(s.how)}</div></div>`;
+      const body = { infer: t2UiInfer, reg: t2UiReg, viz: t2UiViz, knn: t2UiKnn, nn: t2UiNn, llm: t2UiLlm }[k](s);
+      const foot = `<div class="rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700 p-4 text-sm leading-8">💡 ${t2esc(s.learn)}</div>`;
+      return head + `<div class="${t2card}">${body}</div>` + foot;
+    }
+    function t2LabInit(lab) {
+      if (!T2.labSim) return;
+      const s = lab.sims[T2.labSim];
+      ({ infer: t2InitInfer, reg: t2InitReg, viz: t2InitViz, knn: t2InitKnn, nn: t2InitNn, llm: t2InitLlm }[T2.labSim])(s);
+    }
+    function t2Bind(ids, fn) { ids.forEach(id => { const e = t2g(id); if (e) e.addEventListener('input', () => { const o = t2g(id + '-v'); if (o) o.textContent = e.value; fn(); }); }); }
+    /* 1) الاستدلال الإحصائي */
+    function t2UiInfer(s) {
+      const L = s.labels;
+      return `<div class="grid gap-3 sm:grid-cols-2">${t2sl('inf-p', L.p, 5, 95, 1, 60)}${t2sl('inf-n', L.n, 10, 1000, 10, 100)}</div><div class="flex gap-2 flex-wrap"><button id="inf-go" class="${t2btn}">${L.draw}</button><button id="inf-go20" class="${t2btn}">${L.draw20}</button><button id="inf-rs" class="${t2btn2}">${L.reset}</button></div><div id="inf-out" class="text-sm leading-8"></div><svg id="inf-svg" viewBox="0 0 320 200" class="w-full rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700"></svg>`;
+    }
+    function t2InitInfer(s) {
+      const L = s.labels; let H = [];
+      const draw = () => { const p = t2v('inf-p') / 100, n = t2v('inf-n'); let c = 0; for (let i = 0; i < n; i++) if (Math.random() < p) c++; const ph = c / n, me = 1.96 * Math.sqrt(ph * (1 - ph) / n); H.push({ ph, lo: Math.max(0, ph - me), hi: Math.min(1, ph + me), n, p }); if (H.length > 20) H.shift(); paint(); };
+      const paint = () => {
+        const p = t2v('inf-p') / 100; const X = v => 20 + v * 280;
+        let o = `<line x1="${X(p)}" y1="10" x2="${X(p)}" y2="190" stroke="#dc2626" stroke-width="2" stroke-dasharray="4"/><text x="${X(p)}" y="8" font-size="9" text-anchor="middle" fill="#dc2626">${L.truth} ${Math.round(p * 100)}%</text>`;
+        H.forEach((h, i) => { const y = 18 + i * 8.5; const hit = h.lo <= h.p && h.p <= h.hi; o += `<line x1="${X(h.lo)}" y1="${y}" x2="${X(h.hi)}" y2="${y}" stroke="${hit ? '#16a34a' : '#dc2626'}" stroke-width="3"/><circle cx="${X(h.ph)}" cy="${y}" r="2.5" fill="#1d4ed8"/>`; });
+        t2g('inf-svg').innerHTML = o;
+        const last = H[H.length - 1], hits = H.filter(h => h.lo <= h.p && h.p <= h.hi).length;
+        t2g('inf-out').innerHTML = last ? `${L.last}: <b>${(last.ph * 100).toFixed(1)}%</b> · ${L.range}: <b>${(last.lo * 100).toFixed(1)}% - ${(last.hi * 100).toFixed(1)}%</b><br>${L.cover}: <b>${hits}</b> / ${H.length}` : L.empty;
+      };
+      t2g('inf-go').onclick = draw; t2g('inf-go20').onclick = () => { for (let i = 0; i < 20; i++) draw(); };
+      t2g('inf-rs').onclick = () => { H = []; paint(); };
+      t2Bind(['inf-p', 'inf-n'], () => { H = []; paint(); }); paint();
+    }
+    /* 2) الانحدار */
+    const T2REG = (() => { const r = t2Seed(7), a = []; for (let i = 0; i < 14; i++) { const x = 1 + i * 0.6; a.push([x, 20 + 8 * x + (r() - 0.5) * 22]); } return a; })();
+    function t2UiReg(s) {
+      const L = s.labels;
+      return `<svg id="reg-svg" viewBox="0 0 320 220" class="w-full rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700"></svg><div class="grid gap-3 sm:grid-cols-2">${t2sl('reg-m', L.m, -5, 20, 0.1, 2)}${t2sl('reg-b', L.b, -20, 100, 1, 40)}</div><div class="flex gap-2 flex-wrap"><button id="reg-best" class="${t2btn}">${L.best}</button></div><div id="reg-out" class="text-sm leading-8"></div>`;
+    }
+    function t2InitReg(s) {
+      const L = s.labels, D = T2REG, mx = 9, my = 140;
+      const X = x => 30 + x / mx * 280, Y = y => 205 - y / my * 190;
+      const mse = (m, b) => D.reduce((a, p) => a + Math.pow(p[1] - (m * p[0] + b), 2), 0) / D.length;
+      const fit = () => { const n = D.length, sx = D.reduce((a, p) => a + p[0], 0), sy = D.reduce((a, p) => a + p[1], 0), sxy = D.reduce((a, p) => a + p[0] * p[1], 0), sxx = D.reduce((a, p) => a + p[0] * p[0], 0); const m = (n * sxy - sx * sy) / (n * sxx - sx * sx); return [m, (sy - m * sx) / n]; };
+      const best = fit(), bestMse = mse(best[0], best[1]);
+      const paint = () => {
+        const m = t2v('reg-m'), b = t2v('reg-b');
+        let o = `<line x1="30" y1="205" x2="310" y2="205" stroke="#94a3b8"/><line x1="30" y1="15" x2="30" y2="205" stroke="#94a3b8"/><text x="170" y="218" font-size="9" text-anchor="middle" fill="#64748b">${L.x}</text><text x="8" y="110" font-size="9" fill="#64748b" transform="rotate(-90 8 110)">${L.y}</text>`;
+        D.forEach(p => { const yp = Math.max(0, Math.min(my, m * p[0] + b)); o += `<line x1="${X(p[0])}" y1="${Y(p[1])}" x2="${X(p[0])}" y2="${Y(yp)}" stroke="#f59e0b" stroke-width="1"/>`; });
+        o += `<line x1="${X(0)}" y1="${Y(b)}" x2="${X(mx)}" y2="${Y(m * mx + b)}" stroke="#1d4ed8" stroke-width="2.5"/>`;
+        D.forEach(p => { o += `<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="3.5" fill="#dc2626"/>`; });
+        t2g('reg-svg').innerHTML = o;
+        const e = mse(m, b);
+        t2g('reg-out').innerHTML = `${L.err}: <b>${e.toFixed(1)}</b><br>${L.target}: ${bestMse.toFixed(1)}<br><b>${e <= bestMse * 1.1 ? L.good : L.tryagain}</b>`;
+      };
+      t2Bind(['reg-m', 'reg-b'], paint);
+      t2g('reg-best').onclick = () => { t2g('reg-m').value = best[0].toFixed(1); t2g('reg-b').value = Math.round(best[1]); t2g('reg-m-v').textContent = t2g('reg-m').value; t2g('reg-b-v').textContent = t2g('reg-b').value; paint(); };
+      paint();
+    }
+    /* 3) تصوير البيانات */
+    function t2UiViz(s) {
+      const L = s.labels;
+      return `<div class="flex flex-wrap gap-2 items-center"><select id="viz-d" class="p-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm">${s.datasets.map((d, i) => `<option value="${i}">${t2esc(d.name)}</option>`).join('')}</select><button data-c="bar" class="viz-c ${t2btn}">${L.bar}</button><button data-c="line" class="viz-c ${t2btn}">${L.line}</button><button data-c="pie" class="viz-c ${t2btn}">${L.pie}</button></div><svg id="viz-svg" viewBox="0 0 320 220" class="w-full rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700"></svg><div id="viz-out" class="text-sm leading-8"></div>`;
+    }
+    function t2InitViz(s) {
+      let ch = 'bar'; const col = ['#1d4ed8', '#16a34a', '#f59e0b', '#dc2626', '#7c3aed', '#0891b2', '#db2777'];
+      const paint = () => {
+        const d = s.datasets[+t2g('viz-d').value], n = d.values.length, mxv = Math.max.apply(null, d.values); let o = '';
+        if (ch === 'bar') { const w = 270 / n; d.values.forEach((v, i) => { const h = v / mxv * 150; o += `<rect x="${35 + i * w + 4}" y="${185 - h}" width="${w - 8}" height="${h}" fill="${col[i % 7]}" rx="3"/><text x="${35 + i * w + w / 2}" y="${180 - h}" font-size="9" text-anchor="middle" fill="#334155">${v}</text><text x="${35 + i * w + w / 2}" y="200" font-size="8" text-anchor="middle" fill="#64748b">${t2esc(d.labels[i])}</text>`; }); }
+        else if (ch === 'line') { const pts = d.values.map((v, i) => [35 + i * (270 / Math.max(1, n - 1)), 185 - v / mxv * 150]); o += `<polyline points="${pts.map(p => p.join(',')).join(' ')}" fill="none" stroke="#1d4ed8" stroke-width="2.5"/>`; pts.forEach((p, i) => { o += `<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="#dc2626"/><text x="${p[0]}" y="200" font-size="8" text-anchor="middle" fill="#64748b">${t2esc(d.labels[i])}</text>`; }); }
+        else { const tot = d.values.reduce((a, b) => a + b, 0); let a0 = -Math.PI / 2; d.values.forEach((v, i) => { const a1 = a0 + v / tot * Math.PI * 2, x0 = 110 + 80 * Math.cos(a0), y0 = 110 + 80 * Math.sin(a0), x1 = 110 + 80 * Math.cos(a1), y1 = 110 + 80 * Math.sin(a1); o += `<path d="M110 110 L${x0} ${y0} A80 80 0 ${a1 - a0 > Math.PI ? 1 : 0} 1 ${x1} ${y1} Z" fill="${col[i % 7]}"/>`; o += `<rect x="215" y="${30 + i * 20}" width="10" height="10" fill="${col[i % 7]}"/><text x="230" y="${39 + i * 20}" font-size="9" fill="#334155">${t2esc(d.labels[i])} (${Math.round(v / tot * 100)}%)</text>`; a0 = a1; }); }
+        t2g('viz-svg').innerHTML = o;
+        t2g('viz-out').innerHTML = `<b>${t2esc(s.labels.verdict)}:</b> ${t2esc(d.hint[ch])}`;
+      };
+      document.querySelectorAll('.viz-c').forEach(b => b.onclick = () => { ch = b.dataset.c; paint(); });
+      t2g('viz-d').onchange = paint; paint();
+    }
+    /* 4) تعلم الآلة: أقرب الجيران */
+    const T2KNN = (() => { const r = t2Seed(11), a = []; for (let i = 0; i < 16; i++) { a.push([25 + (r() - 0.5) * 36, 28 + (r() - 0.5) * 36, 0]); a.push([68 + (r() - 0.5) * 36, 70 + (r() - 0.5) * 36, 1]); } return a; })();
+    function t2UiKnn(s) {
+      const L = s.labels;
+      return `<svg id="knn-svg" viewBox="0 0 220 220" class="w-full max-w-sm mx-auto rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 touch-none"></svg><div class="grid gap-3 sm:grid-cols-3">${t2sl('knn-x', L.x, 0, 100, 1, 50)}${t2sl('knn-y', L.y, 0, 100, 1, 50)}${t2sl('knn-k', L.k, 1, 15, 2, 3)}</div><div id="knn-out" class="text-sm leading-8"></div>`;
+    }
+    function t2InitKnn(s) {
+      const L = s.labels, X = v => 10 + v * 2, Y = v => 210 - v * 2, nm = [L.c0, L.c1], cl = ['#1d4ed8', '#dc2626'];
+      const paint = () => {
+        const qx = t2v('knn-x'), qy = t2v('knn-y'), k = t2v('knn-k');
+        const sorted = T2KNN.map(p => ({ p, d: Math.hypot(p[0] - qx, p[1] - qy) })).sort((a, b) => a.d - b.d), nb = sorted.slice(0, k);
+        let o = '';
+        nb.forEach(n => { o += `<line x1="${X(qx)}" y1="${Y(qy)}" x2="${X(n.p[0])}" y2="${Y(n.p[1])}" stroke="#94a3b8" stroke-dasharray="3"/>`; });
+        T2KNN.forEach(p => { const isN = nb.some(n => n.p === p); o += `<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="${isN ? 5 : 3.5}" fill="${cl[p[2]]}" ${isN ? 'stroke="#000" stroke-width="1.5"' : ''}/>`; });
+        o += `<text x="${X(qx)}" y="${Y(qy) + 6}" font-size="18" text-anchor="middle" fill="#16a34a">★</text>`;
+        t2g('knn-svg').innerHTML = o;
+        const v = [0, 0]; nb.forEach(n => v[n.p[2]]++);
+        const pred = v[0] === v[1] ? 0 : (v[0] > v[1] ? 0 : 1);
+        t2g('knn-out').innerHTML = `${L.votes}: <span style="color:${cl[0]}"><b>${nm[0]}</b> ${v[0]}</span> · <span style="color:${cl[1]}"><b>${nm[1]}</b> ${v[1]}</span><br>${L.pred}: <b style="color:${cl[pred]}">${nm[pred]}</b>`;
+      };
+      t2Bind(['knn-x', 'knn-y', 'knn-k'], paint);
+      t2g('knn-svg').addEventListener('click', (ev) => { const r = t2g('knn-svg').getBoundingClientRect(); const x = Math.round(((ev.clientX - r.left) / r.width * 220 - 10) / 2), y = Math.round((210 - (ev.clientY - r.top) / r.height * 220) / 2); t2g('knn-x').value = Math.max(0, Math.min(100, x)); t2g('knn-y').value = Math.max(0, Math.min(100, y)); t2g('knn-x-v').textContent = t2g('knn-x').value; t2g('knn-y-v').textContent = t2g('knn-y').value; paint(); });
+      paint();
+    }
+    /* 5) الشبكات العصبية: خلية واحدة */
+    function t2UiNn(s) {
+      const L = s.labels;
+      return `<div class="grid gap-3 sm:grid-cols-2">${t2sl('nn-x1', L.x1, 0, 1, 0.1, 1)}${t2sl('nn-x2', L.x2, 0, 1, 0.1, 1)}${t2sl('nn-w1', L.w1, -2, 2, 0.1, 1)}${t2sl('nn-w2', L.w2, -2, 2, 0.1, 1)}${t2sl('nn-b', L.b, -2, 2, 0.1, -1.5)}<label class="block text-sm font-bold">${L.act}<select id="nn-a" class="mt-1 w-full p-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm"><option value="step">${L.step}</option><option value="sig">${L.sig}</option><option value="relu">${L.relu}</option></select></label></div><div class="flex gap-2 flex-wrap"><button id="nn-and" class="${t2btn}">${L.and}</button><button id="nn-or" class="${t2btn}">${L.or}</button></div><svg id="nn-svg" viewBox="0 0 320 130" class="w-full rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700"></svg><div id="nn-out" class="text-sm leading-8"></div>`;
+    }
+    function t2InitNn(s) {
+      const L = s.labels, ids = ['nn-x1', 'nn-x2', 'nn-w1', 'nn-w2', 'nn-b'];
+      const paint = () => {
+        const x1 = t2v('nn-x1'), x2 = t2v('nn-x2'), w1 = t2v('nn-w1'), w2 = t2v('nn-w2'), b = t2v('nn-b'), a = t2g('nn-a').value;
+        const z = w1 * x1 + w2 * x2 + b; const y = a === 'step' ? (z >= 0 ? 1 : 0) : (a === 'sig' ? 1 / (1 + Math.exp(-z)) : Math.max(0, z));
+        const f = n => n.toFixed(2);
+        t2g('nn-svg').innerHTML = `<circle cx="40" cy="35" r="18" fill="#dbeafe" stroke="#1d4ed8"/><text x="40" y="39" font-size="11" text-anchor="middle">${f(x1)}</text><circle cx="40" cy="95" r="18" fill="#dbeafe" stroke="#1d4ed8"/><text x="40" y="99" font-size="11" text-anchor="middle">${f(x2)}</text><line x1="58" y1="35" x2="150" y2="65" stroke="#64748b" stroke-width="${1 + Math.abs(w1) * 2}"/><line x1="58" y1="95" x2="150" y2="65" stroke="#64748b" stroke-width="${1 + Math.abs(w2) * 2}"/><text x="95" y="38" font-size="10" fill="#475569">w=${f(w1)}</text><text x="95" y="102" font-size="10" fill="#475569">w=${f(w2)}</text><circle cx="170" cy="65" r="22" fill="#fef3c7" stroke="#f59e0b"/><text x="170" y="62" font-size="9" text-anchor="middle">Σ+b</text><text x="170" y="75" font-size="10" text-anchor="middle">${f(z)}</text><line x1="192" y1="65" x2="260" y2="65" stroke="#64748b" stroke-width="2"/><circle cx="282" cy="65" r="22" fill="${y >= 0.5 ? '#bbf7d0' : '#fecaca'}" stroke="#16a34a"/><text x="282" y="69" font-size="12" font-weight="bold" text-anchor="middle">${f(y)}</text>`;
+        t2g('nn-out').innerHTML = `${L.z}: <b>${w1.toFixed(1)}×${x1.toFixed(1)} + ${w2.toFixed(1)}×${x2.toFixed(1)} + ${b.toFixed(1)} = ${f(z)}</b><br>${L.out}: <b>${f(y)}</b>`;
+      };
+      const set = (a, b2, c, st) => { t2g('nn-w1').value = a; t2g('nn-w2').value = b2; t2g('nn-b').value = c; t2g('nn-a').value = st; ids.forEach(i => t2g(i + '-v').textContent = t2g(i).value); paint(); };
+      t2Bind(ids, paint); t2g('nn-a').onchange = paint;
+      t2g('nn-and').onclick = () => set(1, 1, -1.5, 'step'); t2g('nn-or').onclick = () => set(1, 1, -0.5, 'step'); paint();
+    }
+    /* 6) النماذج اللغوية الكبيرة: توقع الكلمة التالية */
+    function t2UiLlm(s) {
+      const L = s.labels;
+      return `<div class="flex flex-wrap gap-2 items-center"><select id="llm-p" class="p-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm">${s.prompts.map((p, i) => `<option value="${i}">${t2esc(p.name)}</option>`).join('')}</select></div>${t2sl('llm-t', L.temp, 0.1, 2, 0.1, 1)}<div id="llm-sent" class="rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 text-base font-bold leading-8"></div><div id="llm-bars" class="space-y-2"></div><div class="flex gap-2 flex-wrap"><button id="llm-pick" class="${t2btn}">${L.pick}</button><button id="llm-rs" class="${t2btn2}">${L.reset}</button></div><div id="llm-out" class="text-sm leading-8"></div>`;
+    }
+    function t2InitLlm(s) {
+      const L = s.labels; let step = 0, text = '';
+      const reset = () => { const p = s.prompts[+t2g('llm-p').value]; step = 0; text = p.start; paint(); };
+      const probs = () => { const p = s.prompts[+t2g('llm-p').value], tk = p.steps[step]; if (!tk) return null; const T = t2v('llm-t'), mx = Math.max.apply(null, tk.map(x => x[1])), ex = tk.map(x => Math.exp((x[1] - mx) / T)), sum = ex.reduce((a, b) => a + b, 0); return tk.map((x, i) => [x[0], ex[i] / sum]); };
+      const paint = () => {
+        t2g('llm-sent').textContent = text; const pr = probs();
+        t2g('llm-bars').innerHTML = pr ? pr.map(x => `<div class="text-sm"><div class="flex justify-between"><span class="font-bold">${t2esc(x[0])}</span><span>${(x[1] * 100).toFixed(0)}%</span></div><div class="h-3 rounded-full bg-slate-200 dark:bg-slate-700"><div class="h-3 rounded-full bg-blue-700" style="width:${(x[1] * 100).toFixed(0)}%"></div></div></div>`).join('') : '';
+        t2g('llm-out').textContent = pr ? L.hint : L.done; t2g('llm-pick').disabled = !pr;
+      };
+      t2g('llm-pick').onclick = () => { const pr = probs(); if (!pr) return; let r = Math.random(), c = 0, ch = pr[pr.length - 1][0]; for (const x of pr) { c += x[1]; if (r <= c) { ch = x[0]; break; } } text += ' ' + ch; step++; paint(); };
+      t2g('llm-rs').onclick = reset; t2g('llm-p').onchange = reset; t2Bind(['llm-t'], paint); reset();
+    }
+    /* ---------- العرض الرئيسي ---------- */
     async function renderTerm2Open(sec) {
       const mySeq = (T2.seq = (T2.seq || 0) + 1);
-      let html = `<div class="text-center"><h2 class="text-2xl font-extrabold text-blue-950 dark:text-white">الترم التاني</h2></div>${t2Tabs()}`;
+      const prev = appState.term2Open ? '' : `<div class="rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 p-2 text-center text-xs font-bold">👨‍🏫 معاينة المعلم: الترم التاني لسه مقفول للطلاب</div>`;
+      let html = `<div class="text-center"><h2 class="text-2xl font-extrabold text-blue-950 dark:text-white">الترم التاني</h2></div>${prev}${t2Tabs()}`;
       sec.innerHTML = html + `<div class="text-center p-8 text-slate-500">جاري التحميل...</div>`;
       try {
         const idx = await t2Load('index');
         if (mySeq !== T2.seq) return;
-        if (T2.view === 'lessons') {
+        const all = idx.chapters.flatMap(c => c.lessons);
+        const picker = (view) => idx.chapters.map(c => `<div class="${t2card}"><h3 class="text-lg font-extrabold text-blue-900 dark:text-blue-200">الفصل ${c.id}: ${t2esc(c.title)}</h3><div class="grid gap-2">${c.lessons.map(l => `<button onclick="t2Go('${view}','${l.id}')" class="text-right p-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-slate-700 font-bold text-sm">الدرس ${l.id}: ${t2esc(l.title)}</button>`).join('')}</div></div>`).join('');
+        let after = null;
+        if (T2.view === 'map') {
+          html += `<div class="${t2card}"><h3 class="text-lg font-extrabold">🗺️ خريطة المنهج</h3><p class="text-sm text-slate-600 dark:text-slate-300">فصول ودروس الترم التاني. اضغط على أي درس تفتح شرحه.</p></div>` + picker('explain');
+        } else if (T2.view === 'explain') {
           if (!T2.lesson) {
-            html += idx.chapters.map(c => `<div class="${t2card}"><h3 class="text-lg font-extrabold text-blue-900 dark:text-blue-200">الفصل ${c.id}: ${t2esc(c.title)}</h3><div class="grid gap-2">${c.lessons.map(l => `<button onclick="t2Go('lessons','${l.id}')" class="text-right p-3 rounded-xl border border-slate-300 dark:border-slate-600 hover:bg-blue-50 dark:hover:bg-slate-700 font-bold text-sm">الدرس ${l.id}: ${t2esc(l.title)}</button>`).join('')}</div></div>`).join('');
+            html += `<div class="${t2card}"><h3 class="text-lg font-extrabold">📖 الشرح التفاعلي</h3><p class="text-sm">اختار الدرس.</p></div>` + picker('explain');
           } else {
             const d = await t2Load('L' + T2.lesson); if (mySeq !== T2.seq) return;
-            html += `<button onclick="t2Go('lessons')" class="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 text-sm font-bold">→ كل الدروس</button>` + t2Lesson(d);
+            const i = all.findIndex(l => l.id === T2.lesson), pv = all[i - 1], nx = all[i + 1];
+            html += `<button onclick="t2Go('map')" class="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 text-sm font-bold">→ خريطة المنهج</button>` + t2Lesson(d) +
+              `<div class="flex justify-between gap-2">${nx ? `<button onclick="t2Go('explain','${nx.id}')" class="px-4 py-2 rounded-xl bg-blue-700 text-white font-bold text-sm">← الدرس ${nx.id}</button>` : '<span></span>'}${pv ? `<button onclick="t2Go('explain','${pv.id}')" class="px-4 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 font-bold text-sm">الدرس ${pv.id} →</button>` : '<span></span>'}</div>`;
           }
+        } else if (T2.view === 'gloss') {
+          const f = await t2Load('flash'); if (mySeq !== T2.seq) return;
+          html += t2Gloss(f, idx);
+        } else if (T2.view === 'lab') {
+          const lab = await t2Load('lab'); if (mySeq !== T2.seq) return;
+          html += t2Lab(lab); after = () => t2LabInit(lab);
         } else if (T2.view === 'flash') {
           const f = await t2Load('flash'); if (mySeq !== T2.seq) return;
           const lf = T2.lesson ? f.filter(x => x[0] === T2.lesson) : f;
-          const sel = `<select onchange="T2.lesson=this.value||null;T2.flashI=0;T2.flashShow=false;renderTerm2()" class="p-2 rounded-xl border border-slate-300 dark:bg-slate-800 text-sm"><option value="">كل الدروس</option>${idx.chapters.flatMap(c => c.lessons).map(l => `<option value="${l.id}" ${T2.lesson === l.id ? 'selected' : ''}>الدرس ${l.id}</option>`).join('')}</select>`;
+          const sel = `<select onchange="T2.lesson=this.value||null;T2.flashI=0;T2.flashShow=false;renderTerm2()" class="p-2 rounded-xl border border-slate-300 dark:bg-slate-800 text-sm"><option value="">كل الدروس</option>${all.map(l => `<option value="${l.id}" ${T2.lesson === l.id ? 'selected' : ''}>الدرس ${l.id}</option>`).join('')}</select>`;
           const c = lf[T2.flashI % lf.length];
           html += `<div class="text-center">${sel}</div><div class="${t2card} text-center"><div class="text-xs text-slate-500">${T2.flashI % lf.length + 1} / ${lf.length} · الدرس ${t2esc(c[0])}</div><div class="text-xl font-extrabold">${t2esc(c[1])}</div>${T2.flashShow ? `<p class="text-sm sm:text-base leading-8">${t2esc(c[2])}</p>` : ''}<div class="flex gap-2 justify-center"><button onclick="T2.flashShow=!T2.flashShow;renderTerm2()" class="px-4 py-2 rounded-xl bg-teal-600 text-white font-bold">${T2.flashShow ? 'إخفاء' : 'إظهار المعنى'}</button><button onclick="T2.flashI++;T2.flashShow=false;renderTerm2()" class="px-4 py-2 rounded-xl bg-blue-700 text-white font-bold">التالي</button></div></div>`;
-        } else if (T2.view === 'practice') {
-          if (!T2.lesson) {
-            html += `<div class="${t2card}"><h3 class="font-extrabold">اختار درس للتدريب</h3><div class="grid gap-2">${idx.chapters.flatMap(c => c.lessons).map(l => `<button onclick="t2Go('practice','${l.id}')" class="text-right p-3 rounded-xl border border-slate-300 dark:border-slate-600 font-bold text-sm">الدرس ${l.id}: ${t2esc(l.title)}</button>`).join('')}</div></div>`;
-          } else {
-            const g = await t2Load('graded'); if (mySeq !== T2.seq) return;
-            if (!T2.quizSet) T2.quizSet = g.filter(x => x.lesson === T2.lesson).sort((a, b) => a.level - b.level);
-            html += `<button onclick="t2Go('practice')" class="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 text-sm font-bold">→ كل الدروس</button>` + t2Quiz(T2.quizSet, 'تدريب الدرس ' + T2.lesson);
-          }
         } else {
-          const ex = await t2Load('exam'); if (mySeq !== T2.seq) return;
-          T2.quizSet = ex;
-          html += t2Quiz(ex, 'امتحان الترم التاني');
+          const m = T2.qmode || 'practice';
+          const mb = (k, l) => `<button onclick="t2Go('${k}')" class="px-4 py-2 rounded-xl text-sm font-extrabold ${m === k ? 'bg-teal-600 text-white' : 'bg-slate-200 dark:bg-slate-700'}">${l}</button>`;
+          html += `<div class="flex gap-2 justify-center">${mb('practice', '✍️ تدريب بعد كل درس')}${mb('exam', '🎓 الامتحان النهائي')}</div>`;
+          if (m === 'practice') {
+            if (!T2.lesson) {
+              html += `<div class="${t2card}"><h3 class="font-extrabold">اختار درس للتدريب</h3><div class="grid gap-2">${all.map(l => `<button onclick="t2Go('practice','${l.id}')" class="text-right p-3 rounded-xl border border-slate-300 dark:border-slate-600 font-bold text-sm">الدرس ${l.id}: ${t2esc(l.title)}</button>`).join('')}</div></div>`;
+            } else {
+              const g = await t2Load('graded'); if (mySeq !== T2.seq) return;
+              if (!T2.quizSet) T2.quizSet = g.filter(x => x.lesson === T2.lesson).sort((a, b) => a.level - b.level);
+              html += `<button onclick="t2Go('practice')" class="px-3 py-2 rounded-xl bg-slate-200 dark:bg-slate-700 text-sm font-bold">→ كل الدروس</button>` + t2Quiz(T2.quizSet, 'تدريب الدرس ' + T2.lesson);
+            }
+          } else {
+            const ex = await t2Load('exam'); if (mySeq !== T2.seq) return;
+            T2.quizSet = ex;
+            html += t2Quiz(ex, 'امتحان الترم التاني');
+          }
         }
         sec.innerHTML = html;
+        if (after) after();
       } catch (e) {
         sec.innerHTML = html + `<div class="${t2card} text-center">تعذر تحميل المحتوى دلوقتي. جرّب تاني بعد شوية.</div>`;
       }
@@ -2337,7 +2534,7 @@
       if (b1) b1.className = inT2 ? off : on;
       if (b2) {
         b2.className = inT2 ? on : off;
-        b2.innerHTML = appState.term2Open ? 'الترم التاني' : '🔒 الترم التاني <span class="text-xs font-bold">(قريبًا)</span>';
+        b2.innerHTML = t2Unlocked() ? 'الترم التاني' : '🔒 الترم التاني <span class="text-xs font-bold">(قريبًا)</span>';
       }
       const st = document.getElementById('td-term2-status');
       if (st) st.textContent = appState.term2Open ? 'مفتوح للطلاب 🟢' : 'مقفول 🔒';
