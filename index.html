@@ -2297,6 +2297,7 @@
         cs.onAuthStateChanged(cs.auth, async (user) => {
           try {
             if (!user) return;
+            if (window.__registering) return;
             if (appState.currentUser || appState.isTeacherMode) return;
             const email = String(user.email || '').toLowerCase();
             if (email === TEACHER_EMAIL) {
@@ -2529,7 +2530,13 @@
       return p.length >= 8 && /[A-Z]/.test(p) && /[a-z]/.test(p) && /[0-9]/.test(p) && /[^A-Za-z0-9]/.test(p);
     }
 
+    // أثناء التسجيل نتجاهل حدث تغيّر حالة الدخول حتى لا تظهر جلسة مؤقتة قبل أن يؤكد الخادم الكود
     async function handleStudentRegister(e) {
+      window.__registering = true;
+      try { await handleStudentRegisterInner(e); } finally { window.__registering = false; }
+    }
+
+    async function handleStudentRegisterInner(e) {
       e.preventDefault();
       hideAuthFeedback();
       const fullName = (document.getElementById('reg-fullname').value || '').trim();
@@ -2597,6 +2604,9 @@
         await batch.commit();
       } catch (err) {
         try { if (cs.auth.currentUser) await cs.auth.currentUser.delete(); } catch (e) {}
+        appState.currentUser = null;
+        delete studentsRegistry[key];
+        saveLocalRegistry(studentsRegistry);
         const ec = err && err.code ? err.code : '';
         if (ec === 'permission-denied' || ec === 'not-found') {
           showAuthFeedback('كود التسجيل غير صحيح، أو معطّل، أو استُخدم 3 مرات بالفعل. تأكد من الكود أو تواصل مع المعلم.');
