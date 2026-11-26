@@ -13,6 +13,10 @@
   <!-- مكتبة Tailwind CSS للتصميم المتجاوب -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
+    // الوضع الليلي هو الافتراضي؛ اختيار المستخدم محفوظ على الجهاز
+    (function(){try{if(localStorage.getItem('ict-theme')!=='light'){document.documentElement.classList.add('dark');}}catch(e){document.documentElement.classList.add('dark');}})();
+  </script>
+  <script>
     tailwind.config = {
       darkMode: 'class',
       theme: {
@@ -1001,6 +1005,6 @@
   <!-- ===================================================================== -->
   <!-- البيانات التعليمية والمنطق البرمجي التفاعلي (JavaScript) -->
   <!-- ===================================================================== -->
-  <script src="app.v3.js?v=2"></script>
+  <script src="app.v4.js?v=4"></script>
 </body>
 </html>
