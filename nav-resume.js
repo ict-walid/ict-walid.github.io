@@ -132,7 +132,7 @@
 
 /* مزامنة إجابات الدروس وحالة الاختبارات وتقدم المعاينة مع حساب الطالب في السحابة (Firestore) */
 (function () {
-  var AP = 'ict_assess_v1_', EP = 'ict_exam_v1_', PKEY = 'ict_prevprog_v1';
+  var AP = 'ict_assess_v1_', EP = 'ict_exam_v1_', GP = 'ict_gq_v1_', PKEY = 'ict_prevprog_v1';
   var TEACHER = 'teacher@ict-walid.app', PREV_ID = 'teacher_preview';
   var rawSet = Storage.prototype.setItem, timer = null, applying = false, failed = 0;
   function cs() { var c = window.cloudStore; return (c && c.ready && c.db && c.auth && c.auth.currentUser) ? c : null; }
@@ -146,10 +146,11 @@
   function J(k) { try { var v = JSON.parse(localStorage.getItem(k) || 'null'); return (v && typeof v === 'object') ? v : null; } catch (e) { return null; } }
   function put(k, v) { applying = true; try { rawSet.call(localStorage, k, JSON.stringify(v)); } catch (e) {} applying = false; }
   function collect(k) {
-    return { assess: J(AP + k.a) || {}, exams: J(EP + k.e) || {}, prog: k.prev ? (J(PKEY) || null) : null, t: Date.now() };
+    return { assess: J(AP + k.a) || {}, exams: J(EP + k.e) || {}, gq: J(GP + k.a) || {}, prog: k.prev ? (J(PKEY) || null) : null, t: Date.now() };
   }
   function seed(k, cx) {
     if (!cx || typeof cx !== 'object') return;
+    if (cx.gq) put(GP + k.a, Object.assign({}, cx.gq, J(GP + k.a) || {}));
     if (cx.assess) put(AP + k.a, Object.assign({}, cx.assess, J(AP + k.a) || {}));
     if (cx.exams) {
       var le = J(EP + k.e) || {}, m = Object.assign({}, le);
@@ -178,7 +179,7 @@
   Storage.prototype.setItem = function (key) {
     var r = rawSet.apply(this, arguments);
     if (!applying && this === window.localStorage && typeof key === 'string' &&
-        (key.indexOf(AP) === 0 || key.indexOf(EP) === 0 || key === PKEY)) schedule();
+        (key.indexOf(AP) === 0 || key.indexOf(EP) === 0 || key.indexOf(GP) === 0 || key === PKEY)) schedule();
     return r;
   };
   window.addEventListener('pagehide', function () { if (timer) { clearTimeout(timer); push(); } });
@@ -212,6 +213,7 @@
         try { updateProgressUI(); } catch (e) {}
       }
       try { if (appState.activeTab === 'lessons' && !window.__ictRestoring) renderLessonExplorer(); } catch (e) {}
+      try { if (typeof filterGradedLevel === 'function') filterGradedLevel(appState.gradedLevel || 1); } catch (e) {}
     }).catch(function () {});
   }
 })();
@@ -253,4 +255,71 @@
   var orig = window.renderCurriculumGrid;
   if (typeof orig === 'function') window.renderCurriculumGrid = function () { var r = orig.apply(this, arguments); enhance(); return r; };
   enhance();
+})();
+
+
+/* حفظ إجابات الأسئلة المتدرجة واستعادتها بعد التحديث (محليًا وفي حساب الطالب) */
+(function () {
+  var GP = 'ict_gq_v1_', restoring = false;
+  function key() {
+    try {
+      var u = appState.currentUser; if (!u) return null;
+      if (u.username === 'mr_walid_preview') return GP + 'mr_walid_preview';
+      return GP + String(u.uid || u.username || '');
+    } catch (e) { return null; }
+  }
+  function load() { var k = key(); if (!k) return {}; try { return JSON.parse(localStorage.getItem(k) || '{}') || {}; } catch (e) { return {}; } }
+  var oa = window.answerGradedQuestion;
+  if (typeof oa === 'function') window.answerGradedQuestion = function (id, idx) {
+    var r = oa.apply(this, arguments);
+    if (!restoring) { var k = key(); if (k) { var m = load(); if (m[id] === undefined) { m[id] = idx; try { localStorage.setItem(k, JSON.stringify(m)); } catch (e) {} } } }
+    return r;
+  };
+  var of = window.filterGradedLevel;
+  if (typeof of === 'function') window.filterGradedLevel = function () {
+    var r = of.apply(this, arguments);
+    var m = load(); restoring = true;
+    try { Object.keys(m).forEach(function (id) { if (document.getElementById('gq-fb-' + id)) { try { oa(id, m[id]); } catch (e) {} } }); } finally { restoring = false; }
+    return r;
+  };
+})();
+
+/* لا تُظهر شاشة تسجيل الدخول أثناء استعادة جلسة محفوظة بعد التحديث */
+(function () {
+  var H = 'ict_sess_hint';
+  var hint = false; try { hint = localStorage.getItem(H) === '1'; } catch (e) {}
+  var root = document.documentElement, t0 = Date.now();
+  function done() { root.classList.remove('ict-boot'); }
+  if (hint) {
+    var st = document.createElement('style');
+    st.textContent = 'html.ict-boot #auth-portal-section{display:none !important}html.ict-boot body:after{content:"\u062c\u0627\u0631\u064d \u0627\u0644\u062a\u062d\u0645\u064a\u0644...";display:block;text-align:center;padding:4rem 1rem;font-weight:800;color:#64748b}';
+    document.head.appendChild(st);
+    root.classList.add('ict-boot');
+    var iv = setInterval(function () {
+      var ready = false;
+      try {
+        if (appState.currentUser) ready = true;
+        else if (appState.isTeacherMode) {
+          var sn = null; try { sn = JSON.parse(localStorage.getItem('ict_nav_v1') || 'null'); } catch (e) {}
+          ready = !(sn && sn.id === 'preview' && Date.now() - sn.t < 12 * 3600 * 1000) || Date.now() - t0 > 4000;
+        } else {
+          var c = window.cloudStore;
+          if (c && c.ready && c.auth && c.auth.currentUser === null && c._ictAuthReady) ready = true;
+          if (c && c.mode === 'local' && Date.now() - t0 > 500) ready = true;
+        }
+      } catch (e) {}
+      if (ready || Date.now() - t0 > 8000) { clearInterval(iv); done(); }
+    }, 60);
+    var wait = setInterval(function () {
+      var c = window.cloudStore;
+      if (c && c.ready && c.auth) { clearInterval(wait); try { c.auth.authStateReady().then(function () { c._ictAuthReady = true; }); } catch (e) { c._ictAuthReady = true; } }
+    }, 50);
+  }
+  function mark(name) {
+    var f = window[name]; if (typeof f !== 'function') return;
+    window[name] = function () { var r = f.apply(this, arguments); try { localStorage.setItem(H, '1'); } catch (e) {} return r; };
+  }
+  mark('applyStudentSession'); mark('applyTeacherSession');
+  var lo = window.logoutUser;
+  if (typeof lo === 'function') window.logoutUser = function () { try { localStorage.removeItem(H); } catch (e) {} return lo.apply(this, arguments); };
 })();
