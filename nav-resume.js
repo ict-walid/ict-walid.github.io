@@ -481,3 +481,20 @@
     });
   };
 })();
+
+/* إخفاء دخول المعلم عن الطلاب: يظهر فقط عند فتح الموقع بالرابط ‎#teacher */
+(function () {
+  var st = document.createElement('style');
+  st.textContent = '#auth-tab-teacher{display:none !important}div:has(>#auth-tab-teacher){grid-template-columns:repeat(2,minmax(0,1fr)) !important}' +
+    'html.ict-show-teacher #auth-tab-teacher{display:block !important}html.ict-show-teacher div:has(>#auth-tab-teacher){grid-template-columns:repeat(3,minmax(0,1fr)) !important}';
+  document.head.appendChild(st);
+  function wants() { return /^#teacher$/i.test(location.hash) || /[?&]teacher(=|&|$)/i.test(location.search); }
+  function apply() {
+    if (!wants()) return;
+    document.documentElement.classList.add('ict-show-teacher');
+    try { if (!appState.currentUser && !appState.isTeacherMode) switchAuthMode('teacher'); } catch (e) {}
+  }
+  if (wants()) document.documentElement.classList.add('ict-show-teacher');
+  document.addEventListener('DOMContentLoaded', apply);
+  window.addEventListener('hashchange', apply);
+})();
