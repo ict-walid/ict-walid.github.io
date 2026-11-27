@@ -308,7 +308,7 @@
           if (c && c.mode === 'local' && Date.now() - t0 > 500) ready = true;
         }
       } catch (e) {}
-      if (ready || Date.now() - t0 > 8000) { clearInterval(iv); done(); }
+      if (ready || Date.now() - t0 > 15000) { clearInterval(iv); done(); }
     }, 60);
     var wait = setInterval(function () {
       var c = window.cloudStore;
