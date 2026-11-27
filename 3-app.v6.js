@@ -2966,7 +2966,9 @@
       const file = el.getAttribute('data-lf');
       const mode = el.getAttribute('data-mode');
       const name = el.getAttribute('data-name') || file;
-      const old = el.textContent;
+      if (el.dataset.busy) return;
+      el.dataset.busy = '1';
+      const old = el.dataset.orig || (el.dataset.orig = el.textContent);
       const w = mode === 'view' ? window.open('', '_blank') : null;
       el.textContent = '... جاري التحميل';
       try {
@@ -2979,6 +2981,7 @@
         alert('تعذر تحميل الملف. تأكد إنك مسجل دخول وجرب تاني.');
       }
       el.textContent = old;
+      delete el.dataset.busy;
     }
     document.addEventListener('click', (ev) => {
       const el = ev.target.closest && ev.target.closest('[data-lf]');
