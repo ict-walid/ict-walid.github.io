@@ -358,3 +358,32 @@
     }, 100);
   });
 })();
+
+
+/* زر الرجوع من معاينة المعلم إلى لوحة المعلم (أكواد الطلاب والمتابعة) بدون تسجيل خروج */
+(function () {
+  var st = document.createElement('style');
+  st.textContent = '#ict-back-teacher{position:fixed;left:.75rem;bottom:5rem;z-index:60;display:none;align-items:center;gap:.4rem;background:#1d4ed8;color:#fff;font-weight:800;font-size:.8rem;padding:.65rem .95rem;border-radius:999px;box-shadow:0 6px 18px rgba(0,0,0,.3);border:0;cursor:pointer}#ict-back-teacher.on{display:inline-flex}@media (min-width:768px){#ict-back-teacher{bottom:1.25rem;font-size:.9rem}}';
+  document.head.appendChild(st);
+  var btn = document.createElement('button');
+  btn.id = 'ict-back-teacher'; btn.type = 'button'; btn.textContent = '\u2190 \u0627\u0644\u0639\u0648\u062f\u0629 \u0644\u0644\u0648\u062d\u0629 \u0627\u0644\u0645\u0639\u0644\u0645';
+  btn.onclick = function () {
+    try { localStorage.removeItem('ict_nav_v1'); localStorage.setItem('ict_sess_kind', 'teacher'); } catch (e) {}
+    appState.currentUser = null;
+    applyTeacherSession();
+    try { window.scrollTo(0, 0); } catch (e) {}
+    refresh();
+  };
+  function refresh() {
+    var on = false;
+    try { on = !!(appState.currentUser && appState.currentUser.username === 'mr_walid_preview'); } catch (e) {}
+    btn.classList.toggle('on', on);
+  }
+  function add() { if (!btn.parentNode) document.body.appendChild(btn); refresh(); }
+  if (document.body) add(); else document.addEventListener('DOMContentLoaded', add);
+  ['applyStudentSession', 'applyTeacherSession', 'logoutUser'].forEach(function (n) {
+    var f = window[n]; if (typeof f !== 'function') return;
+    window[n] = function () { var r = f.apply(this, arguments); refresh(); return r; };
+  });
+  setInterval(refresh, 700);
+})();
