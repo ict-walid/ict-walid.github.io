@@ -2881,7 +2881,7 @@
           const m = e.x.mcq;
           return `
           <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-700/40 border border-slate-200 dark:border-slate-600 space-y-2.5">
-            <p class="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 leading-relaxed whitespace-pre-line">س: ${escapeHtml(m.stem)}</p>
+            <p class="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 leading-relaxed whitespace-pre-line">س${e.i + 1}: ${escapeHtml(m.stem)}</p>
             <div id="${id}-mc" data-ans="${escapeHtml(m.opts[m.correct])}" class="space-y-2">
               ${m.opts.map((o, oi) => `
                 <button data-opt="${oi}" onclick="assessPick('${id}', ${oi}, ${m.correct})" class="w-full text-right px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:border-emerald-400 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 leading-relaxed transition">
@@ -2894,7 +2894,7 @@
         }
         return `
           <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-700/40 border border-slate-200 dark:border-slate-600 space-y-2.5">
-            <p class="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 leading-relaxed whitespace-pre-line">س: ${escapeHtml(e.x.q)}</p>
+            <p class="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 leading-relaxed whitespace-pre-line">س${e.i + 1}: ${escapeHtml(e.x.q)}</p>
             ${isEssay ? `<textarea rows="3" placeholder="اكتب إجابتك هنا ثم قارنها بالإجابة النموذجية... (اختياري)" class="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-xs sm:text-sm text-slate-800 dark:text-slate-100 leading-relaxed"></textarea>` : `<div class="text-[11px] font-bold text-slate-500 dark:text-slate-400">ملف التقييمات لا يتضمن خيارات لهذا السؤال، لذلك تظهر إجابته فقط.</div>`}
             <div>
               <button onclick="document.getElementById('${id}').classList.toggle('hidden')" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold transition">
