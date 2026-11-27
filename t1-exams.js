@@ -54,7 +54,9 @@ function t1BuildExam(u) {
   const mcq = [], essay = [];
   lessons.forEach((lid, i) => {
     const items = T1_ASSESS[lid] || [];
-    const pm = items.filter(x => x.qtype === 'موضوعي' && x.mcq), pe = items.filter(x => x.qtype !== 'موضوعي');
+    const seenQ = new Set();
+    const uniq = x => { const k = x.q.replace(/[\s\u064B-\u0652؟?.،:]/g, ''); if (seenQ.has(k)) return false; seenQ.add(k); return true; };
+    const pm = items.filter(x => x.qtype === 'موضوعي' && x.mcq).filter(uniq), pe = items.filter(x => x.qtype !== 'موضوعي').filter(uniq);
     t1ShuffleSample(pm, nM[i]).forEach(x => mcq.push({type: 'mcq', lid, x}));
     t1ShuffleSample(pe, nE[i]).forEach(x => essay.push({type: 'essay', lid, x}));
   });
