@@ -14,7 +14,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     // الوضع الليلي هو الافتراضي؛ اختيار المستخدم محفوظ على الجهاز
-    (function(){try{if(localStorage.getItem('ict-theme')!=='light'){document.documentElement.classList.add('dark');}}catch(e){document.documentElement.classList.add('dark');}})();
+    (function(){try{if(localStorage.getItem('ict-theme')==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();
   </script>
   <script>
     tailwind.config = {
@@ -1023,5 +1023,6 @@
   <script src="3-app.v6.js?v=14"></script>
   <script src="nav-resume.js?v=11"></script>
   <script src="exam-persist.js?v=1"></script>
+  <script src="answer-lock.js?v=1"></script>
 </body>
 </html>
