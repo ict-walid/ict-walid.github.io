@@ -64,3 +64,5 @@
     return fin.apply(this, arguments);
   };
 })();
+
+document.addEventListener('click',function(ev){var b=ev.target.closest&&ev.target.closest('button');if(!b)return;var m=(b.getAttribute('onclick')||'').match(/getElementById\('([^']+)'\)\.classList\.toggle\('hidden'\)/);if(!m)return;var t=document.getElementById(m[1]);if(!t)return;var x=b.textContent.trim();if(b.dataset.ictShow===undefined){if(x.indexOf('اعرض الإجابة')!==0)return;b.dataset.ictShow=x}b.textContent=t.classList.contains('hidden')?b.dataset.ictShow:'إخفاء الإجابة'});
