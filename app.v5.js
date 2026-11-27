@@ -1684,7 +1684,7 @@
         saveLocalRegistry(studentsRegistry);
         const ec = err && err.code ? err.code : '';
         if (ec === 'permission-denied' || ec === 'not-found') {
-          showAuthFeedback('كود التسجيل غير صحيح، أو معطّل، أو استُخدم 3 مرات بالفعل. تأكد من الكود أو تواصل مع المعلم.');
+          showAuthFeedback('كود التسجيل غير صحيح، أو معطّل، أو استُخدم بالفعل (كل كود لتسجيل واحد فقط). تأكد من الكود أو تواصل مع المعلم.');
         } else {
           showAuthFeedback('تعذر حفظ بيانات الطالب. حاول مرة أخرى.');
         }
@@ -1903,6 +1903,7 @@
       }
       try {
         await batch.commit();
+        try { const fix = cs.writeBatch(cs.db); made.forEach((c) => fix.update(cs.doc(cs.db, 'artifacts', cs.appId, 'public', 'data', 'regcodes', c), { max: 1 })); await fix.commit(); } catch (e2) {}
         regCodeFeedback('تم إنشاء ' + n + ' كود جديد.', true);
       } catch (err) {
         regCodeFeedback('تعذر إنشاء الأكواد. تأكد من نشر قواعد Firebase الجديدة.', false);
@@ -1964,8 +1965,8 @@
       const q = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
       const lines = [['الكود', 'اسم الطالب', 'الاستخدامات', 'الحد الأقصى', 'الحالة'].map(q).join(',')];
       sortedRegCodes().forEach(c => {
-        const state = c.disabled ? 'معطّل' : ((c.uses || 0) >= (c.max || 3) ? 'مستخدم بالكامل' : 'متاح');
-        lines.push([c.code, c.label || '', c.uses || 0, c.max || 3, state].map(q).join(','));
+        const state = c.disabled ? 'معطّل' : ((c.uses || 0) >= (c.max || 1) ? 'مستخدم بالكامل' : 'متاح');
+        lines.push([c.code, c.label || '', c.uses || 0, c.max || 1, state].map(q).join(','));
       });
       const blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
       const url = URL.createObjectURL(blob);
@@ -1980,7 +1981,7 @@
       if (!el) return;
       const codes = sortedRegCodes();
       const total = codes.length;
-      const avail = codes.filter(c => !c.disabled && (c.uses || 0) < (c.max || 3)).length;
+      const avail = codes.filter(c => !c.disabled && (c.uses || 0) < (c.max || 1)).length;
       const sum = document.getElementById('rc-summary');
       if (sum) sum.textContent = total + ' كود | متاح: ' + avail;
       if (regCodesError) {
@@ -1996,7 +1997,7 @@
             el.innerHTML = '<div class="hidden sm:block overflow-x-auto"><table class="w-full text-xs sm:text-sm text-right"><thead><tr class="text-slate-500 border-b border-slate-200 dark:border-slate-700">' +
         '<th class="py-2 px-2">الكود</th><th class="py-2 px-2">اسم الطالب</th><th class="py-2 px-2">الاستخدام</th><th class="py-2 px-2">الحالة</th><th class="py-2 px-2">إجراءات</th></tr></thead><tbody>' +
         codes.map(c => {
-          const uses = c.uses || 0, max = c.max || 3;
+          const uses = c.uses || 0, max = c.max || 1;
           const full = uses >= max;
           const state = c.disabled ? '<span class="text-rose-600 font-extrabold">معطّل</span>' : (full ? '<span class="text-amber-600 font-extrabold">مكتمل</span>' : '<span class="text-teal-600 font-extrabold">متاح</span>');
           const who = (usersByCode[c.code] || []).map(escapeHtml).join('، ');
@@ -2014,7 +2015,7 @@
         }).join('') + '</tbody></table></div>' +
         '<div class="sm:hidden space-y-3">' +
         codes.map(c => {
-          const uses = c.uses || 0, max = c.max || 3;
+          const uses = c.uses || 0, max = c.max || 1;
           const full = uses >= max;
           const state = c.disabled ? '<span class="text-rose-600 font-extrabold text-xs">معطّل</span>' : (full ? '<span class="text-amber-600 font-extrabold text-xs">مكتمل</span>' : '<span class="text-teal-600 font-extrabold text-xs">متاح</span>');
           const who = (usersByCode[c.code] || []).map(escapeHtml).join('، ');
