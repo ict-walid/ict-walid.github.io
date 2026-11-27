@@ -46,7 +46,7 @@
   function restore(s) {
     var id = uid();
     if (!s || !id || s.id !== id || Date.now() - s.t > MAX_AGE || !s.tab) return;
-    restoring = true;
+    restoring = true; window.__ictRestoring = true;
     try {
       if (s.tab === 'term2') {
         if (typeof t2Unlocked === 'function' && !t2Unlocked()) return;
@@ -72,6 +72,7 @@
       }
       window.scrollTo(0, 0);
     } catch (e) {}
+    window.__ictRestoring = false;
     restoring = false;
     save();
   }
