@@ -402,3 +402,82 @@
   });
   setInterval(refresh, 700);
 })();
+
+/* المصطلحات: إضافة الاسم الإنجليزي الوارد في الكتاب بجانب المصطلح العربي */
+(function () {
+  var T1 = {
+    'الذكاء الاصطناعي (AI)': 'الذكاء الاصطناعي (Artificial Intelligence - AI)',
+    'الشبكات العصبية الاصطناعية (ANN)': 'الشبكات العصبية الاصطناعية (Artificial Neural Network - ANN)',
+    'الذكاء الاصطناعي القابل للتفسير (XAI)': 'الذكاء الاصطناعي القابل للتفسير (Explainable AI - XAI)',
+    'نظام التوصية والصيانة التنبؤية': 'نظام التوصية والصيانة التنبؤية (Recommendation System & Predictive Maintenance)',
+    'التحيز الخوارزمي وبيانات التدريب': 'التحيز الخوارزمي وبيانات التدريب (Algorithmic Bias & Training Data)',
+    'مبادئ أخلاقيات الذكاء الاصطناعي والمسؤولية': 'مبادئ أخلاقيات الذكاء الاصطناعي والمسؤولية (AI Ethics & Responsibility)',
+    'التشفير بالمفتاح العام vs التشفير المتماثل': 'التشفير بالمفتاح العام vs التشفير المتماثل (Public-Key vs Symmetric Encryption)',
+    'المصادقة الثنائية (2FA)': 'المصادقة الثنائية (Two-Factor Authentication - 2FA)',
+    'المصادقة متعددة العوامل (MFA)': 'المصادقة متعددة العوامل (Multi-Factor Authentication - MFA)',
+    'الشهادة الرقمية والتوقيع الرقمي': 'الشهادة الرقمية والتوقيع الرقمي (Digital Certificate & Digital Signature)',
+    'الشبكة الافتراضية الخاصة (VPN)': 'الشبكة الافتراضية الخاصة (Virtual Private Network - VPN)',
+    'المنطقة المعزولة (DMZ)': 'المنطقة المعزولة (Demilitarized Zone - DMZ)',
+    'الحادث الأمني وركائز المعلومات (CIA)': 'الحادث الأمني وركائز المعلومات (Security Incident & CIA Triad)',
+    'المراحل الست للاستجابة للحوادث': 'المراحل الست للاستجابة للحوادث (Incident Response)',
+    'بنية الطبقات الثلاث لتطبيق الويب': 'بنية الطبقات الثلاث لتطبيق الويب (Three-Tier Architecture)',
+    'واجهة برمجة التطبيقات (API) وصيغة JSON': 'واجهة برمجة التطبيقات (Application Programming Interface - API) وصيغة JSON (JavaScript Object Notation)',
+    'تصميم المعلومات وتجربة المستخدم (UX)': 'تصميم المعلومات (Information Design) وتجربة المستخدم (User Experience - UX)',
+    'التصميم المتمحور حول المستخدم (UCD) ومبادئ CRAP': 'التصميم المتمحور حول المستخدم (User-Centered Design - UCD) ومبادئ CRAP',
+    'التقييم النوعي (لماذا؟) vs التقييم الكمي (كم؟)': 'التقييم النوعي (Qualitative - لماذا؟) vs التقييم الكمي (Quantitative - كم؟)'
+  };
+  var T2 = {
+    'جمع البيانات': 'Data Collection', 'البيانات الأولية': 'Primary Data', 'البيانات الثانوية': 'Secondary Data',
+    'المجتمع الإحصائي': 'Population', 'العينة': 'Sample', 'تحيز أخذ العينات': 'Sampling Bias',
+    'المعاينة العشوائية البسيطة': 'Simple Random Sampling', 'المعاينة الطبقية': 'Stratified Sampling',
+    'المجتمع الإحصائي والعينة': 'Population & Sample',
+    'تنظيف البيانات': 'Data Cleaning', 'تحويل البيانات': 'Data Transformation', 'القيمة المفقودة': 'Missing Value',
+    'القيمة الشاذة': 'Outlier', 'القيم الشاذة والتكرارات': 'Outliers & Duplicates',
+    'البيانات المفتوحة': 'Open Data', 'شروط الاستخدام': 'Terms of Use', 'الإشارة إلى المصدر': 'Citing the Source',
+    'الاستدلال الإحصائي': 'Statistical Inference', 'التقدير': 'Estimation', 'اختبار الفرضيات': 'Hypothesis Testing',
+    'القيمة الاحتمالية': 'p-value', 'مستوى الدلالة': 'Significance Level', 'ذو دلالة إحصائية': 'Statistically Significant',
+    'مهم عمليًا': 'Practically Important', 'خطأ النوع الأول': 'Type I Error', 'خطأ النوع الثاني': 'Type II Error',
+    'المفاضلة': 'Trade-off', 'تحليل الانحدار': 'Regression Analysis', 'متغير الاستجابة': 'Response Variable',
+    'المتغير التفسيري': 'Explanatory Variable', 'المعامل': 'Coefficient', 'نقطة التقاطع': 'Intercept',
+    'العامل المربك': 'Confounder', 'المتبقّي': 'Residual',
+    'تصور البيانات': 'Data Visualization', 'الخريطة الحرارية': 'Heatmap', 'التراكب الزائد للنقاط': 'Overplotting',
+    'مخطط المستطيلات (الفسيفساء)': 'Mosaic Plot', 'سرد قصص البيانات': 'Data Storytelling',
+    'الجدولة المتقاطعة': 'Cross-tabulation', 'الرسم البياني المضلِّل': 'Misleading Graph',
+    'التعلّم الآلي': 'Machine Learning', 'التحيز': 'Bias', 'مشكلة الصندوق الأسود': 'Black Box Problem',
+    'التعلّم غير الخاضع للإشراف': 'Unsupervised Learning', 'التعلّم المعزز': 'Reinforcement Learning', 'الوسم': 'Label',
+    'التعلّم الخاضع للإشراف': 'Supervised Learning', 'التصنيف': 'Classification', 'السمة': 'Feature',
+    'التجميع': 'Clustering', 'المكافأة': 'Reward', 'الإنسان في الحلقة': 'Human-in-the-Loop',
+    'عقدة (خلية عصبية)': 'Node / Neuron', 'طبقة': 'Layer', 'طبقة الإدخال / المخفية / الإخراج': 'Input / Hidden / Output Layer',
+    'الوزن': 'Weight', 'التدريب': 'Training', 'بيانات التدريب': 'Training Data', 'التعلم العميق': 'Deep Learning',
+    'نموذج اللغة': 'Language Model', 'الهلوسة': 'Hallucination', 'تعدد الوسائط': 'Multimodal',
+    'الذكاء الاصطناعي التوليدي': 'Generative AI', 'التحقق من الحقائق': 'Fact-checking'
+  };
+  var T2X = {
+    'RLHF': 'RLHF (Reinforcement Learning from Human Feedback)',
+    'JSON': 'JSON (JavaScript Object Notation)',
+    'فرضية العدم (H0)': 'فرضية العدم (Null Hypothesis - H0)',
+    'الفرضية البديلة (H1)': 'الفرضية البديلة (Alternative Hypothesis - H1)',
+    'نموذج اللغة الكبير (LLM)': 'نموذج اللغة الكبير (Large Language Model - LLM)'
+  };
+  function fix2(s) {
+    if (typeof s !== 'string') return s;
+    if (T2X[s]) return T2X[s];
+    return T2[s] ? s + ' (' + T2[s] + ')' : s;
+  }
+  try {
+    if (typeof FLASHCARDS_DATA !== 'undefined') FLASHCARDS_DATA.forEach(function (x) { if (T1[x.term]) x.term = T1[x.term]; });
+  } catch (e) {}
+  var orig = window.t2Load;
+  if (typeof orig === 'function') window.t2Load = function (id) {
+    return orig.apply(this, arguments).then(function (d) {
+      try {
+        if (d && !d.__enDone) {
+          d.__enDone = true;
+          if (Array.isArray(d.glossary)) d.glossary.forEach(function (r) { if (Array.isArray(r)) r[0] = fix2(r[0]); });
+          if (Array.isArray(d) && d.length && Array.isArray(d[0]) && typeof d[0][1] === 'string') d.forEach(function (r) { r[1] = fix2(r[1]); });
+        }
+      } catch (e) {}
+      return d;
+    });
+  };
+})();
