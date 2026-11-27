@@ -377,7 +377,21 @@
   function refresh() {
     var on = false;
     try { on = !!(appState.currentUser && appState.currentUser.username === 'mr_walid_preview'); } catch (e) {}
-    btn.classList.toggle('on', on);
+    var home = false; try { home = appState.activeTab === 'home'; } catch (e) {}
+    btn.classList.toggle('on', on && !home);
+    heroBtn();
+    if (hb) hb.style.display = (on && home) ? '' : 'none';
+  }
+  var hb = null;
+  function heroBtn() {
+    if (hb && hb.parentNode) return;
+    var first = document.querySelector('button[onclick="switchTab(\'lessons\')"].bg-amber-500');
+    if (!first || !first.parentNode) return;
+    hb = document.createElement('button'); hb.type = 'button'; hb.id = 'ict-hero-back';
+    hb.className = 'px-5 py-3 rounded-2xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs sm:text-sm shadow-md transition';
+    hb.textContent = '\u0627\u0644\u0639\u0648\u062f\u0629 \u0644\u0635\u0641\u062d\u0629 \u0627\u0644\u0645\u0639\u0644\u0645 \ud83c\udfe0';
+    hb.style.display = 'none'; hb.onclick = btn.onclick;
+    first.parentNode.appendChild(hb);
   }
   function add() { if (!btn.parentNode) document.body.appendChild(btn); refresh(); }
   if (document.body) add(); else document.addEventListener('DOMContentLoaded', add);
