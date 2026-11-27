@@ -194,6 +194,7 @@
     if (k && k.prev) previewCloud(k);
     return r;
   };
+  window.__ictPreviewCloud = function () { try { var u = appState.currentUser; if (isPrev(u)) previewCloud(keys(u)); } catch (e) {} };
   function previewCloud(k) {
     var c = cs(); if (!c) return;
     var pr; try { pr = c.getDoc(c.doc(c.db, 'artifacts', c.appId, 'public', 'data', 'students', PREV_ID)); } catch (e) { return; }
@@ -317,9 +318,43 @@
   }
   function mark(name) {
     var f = window[name]; if (typeof f !== 'function') return;
-    window[name] = function () { var r = f.apply(this, arguments); try { localStorage.setItem(H, '1'); } catch (e) {} return r; };
+    window[name] = function (rec) { var r = f.apply(this, arguments); try { localStorage.setItem(H, '1');
+      if (name === 'applyStudentSession' && rec) { if (rec.username === 'mr_walid_preview') { localStorage.setItem('ict_sess_kind', 'preview'); } else if (rec.uid) { localStorage.setItem('ict_sess_kind', 'student:' + rec.uid); } }
+      else if (name === 'applyTeacherSession') localStorage.setItem('ict_sess_kind', 'teacher'); } catch (e) {} return r; };
   }
   mark('applyStudentSession'); mark('applyTeacherSession');
   var lo = window.logoutUser;
   if (typeof lo === 'function') window.logoutUser = function () { try { localStorage.removeItem(H); } catch (e) {} return lo.apply(this, arguments); };
+})();
+
+
+/* استعادة فورية للجلسة من الجهاز بدون انتظار Firebase، ثم التحقق منها في الخلفية */
+(function () {
+  var kind = null; try { kind = localStorage.getItem('ict_sess_kind'); } catch (e) {}
+  if (!kind || kind === 'teacher' || localStorage.getItem('ict_sess_hint') !== '1') return;
+  var optimistic = false;
+  document.addEventListener('DOMContentLoaded', function () {
+    try {
+      if (appState.currentUser || appState.isTeacherMode) return;
+      if (kind === 'preview') { enterStudentPreviewFromTeacher(); optimistic = true; }
+      else if (kind.indexOf('student:') === 0) {
+        var rec = studentsRegistry[kind.slice(8)];
+        if (rec && rec.uid) { applyStudentSession(rec); optimistic = true; }
+      }
+    } catch (e) { optimistic = false; }
+    if (!optimistic) return;
+    var t0 = Date.now();
+    var iv = setInterval(function () {
+      var c = window.cloudStore;
+      if (!(c && c.ready && c.auth && c._ictAuthReady) && Date.now() - t0 < 20000) return;
+      clearInterval(iv);
+      try {
+        var cu = c && c.auth && c.auth.currentUser;
+        if (!cu) { if (c && c.ready && c._ictAuthReady) { logoutUser(); } return; }
+        if (kind === 'preview') { if (String(cu.email || '').toLowerCase() === 'teacher@ict-walid.app') window.__ictPreviewCloud(); else logoutUser(); }
+        else if (cu.uid !== kind.slice(8)) logoutUser();
+        else startTermListener();
+      } catch (e) {}
+    }, 100);
+  });
 })();
