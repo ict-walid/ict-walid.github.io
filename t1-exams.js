@@ -70,6 +70,7 @@ function t1BuildExam(u) {
 function showT1Exam(u, fresh) {
   if (fresh || !window.__t1ex[u]) window.__t1ex[u] = t1BuildExam(u);
   appState.selectedLessonId = 't1-exam-' + u;
+  if (appState.activeTab !== 'lessons') switchTab('lessons');
   renderLessonExplorer();
   window.scrollTo({top: 0, behavior: 'smooth'});
 }
@@ -136,6 +137,7 @@ function renderT1Exam(u) {
   const per = {}; ex.list.forEach(it => per[it.lid] = (per[it.lid] || 0) + 1);
   return `<div class="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm space-y-5 animate-fade-up">
     <div class="space-y-1.5 pb-4 border-b border-slate-100 dark:border-slate-700">
+      <button onclick="t1ExamBack()" class="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 text-xs font-extrabold">→ رجوع لاختيار الاختبار</button>
       <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">📝 شامل ${u} — ${T1_EXAM_UNIT_NAME[u]}</h2>
       <p class="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300">${ex.list.length} سؤالًا: ${nm} موضوعي + ${ne} مقالي، من تقييمات دروس الوحدة (${Object.keys(per).map(k => k + ': ' + per[k]).join('، ')}). الأسئلة عشوائية ومرتبة من الأسهل للأصعب في كل قسم.</p>
       <p class="text-[11px] font-bold text-slate-500 dark:text-slate-400">المقالي: تُحتسب الإجابة صحيحة إذا غطّت معظم المصطلحات الرئيسية للإجابة النموذجية (تقريبًا 60٪ فأكثر) أو تطابقت 90٪ تقريبًا معها. الإجابة النموذجية تظهر دائمًا. التصحيح تقريبي وليس بديلًا عن المدرس.</p>
@@ -148,4 +150,11 @@ function renderT1Exam(u) {
     <button onclick="examFinish(${u})" class="w-full p-3.5 rounded-2xl bg-blue-700 hover:bg-blue-600 text-white text-sm font-extrabold">إنهاء الاختبار وعرض النتيجة</button>
     <div id="exam-result" class="hidden p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 space-y-1"></div>
   </div>`;
+}
+
+
+function t1ExamBack() {
+  switchTab('practice');
+  if (typeof switchPracticeSubTab === 'function') switchPracticeSubTab('exam');
+  window.scrollTo({top: 0, behavior: 'smooth'});
 }

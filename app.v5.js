@@ -2967,6 +2967,7 @@
       return `
         <div class="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm space-y-5 animate-fade-up">
           <div class="space-y-1 pb-4 border-b border-slate-100 dark:border-slate-700">
+            <button onclick="t1ExamBack()" class="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 text-xs font-extrabold">→ رجوع لاختيار الاختبار</button>
             <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">📚 الاختبار الشامل — الترم الأول</h2>
             <p class="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300">مجموعة كبيرة تغطي كل دروس الترم الأول (الوحدات 1-4): ${total} سؤالًا من كتاب الأداءات والتقييمات الرسمي.</p>
           </div>
