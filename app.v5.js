@@ -2842,15 +2842,53 @@
     /*************************************************************************
      * أسئلة تقييمات الترم الأول (من كتاب الأداءات والتقييمات الرسمي)
      *************************************************************************/
+    function assessPick(id, picked, correct) {
+      const box = document.getElementById(id + '-mc');
+      if (!box || box.dataset.done) return;
+      box.dataset.done = '1';
+      const btns = box.querySelectorAll('button[data-opt]');
+      btns.forEach(b => {
+        const i = parseInt(b.dataset.opt, 10);
+        b.disabled = true;
+        b.classList.remove('hover:border-emerald-400');
+        if (i === correct) {
+          b.classList.add('bg-emerald-100', 'dark:bg-emerald-900/50', 'border-emerald-500', 'text-emerald-900', 'dark:text-emerald-100');
+        } else if (i === picked) {
+          b.classList.add('bg-red-100', 'dark:bg-red-900/40', 'border-red-500', 'text-red-900', 'dark:text-red-100');
+        }
+      });
+      const fb = document.getElementById(id + '-fb');
+      if (fb) {
+        fb.classList.remove('hidden');
+        fb.textContent = (picked === correct ? '✔ إجابة صحيحة' : '✘ إجابة غير صحيحة — الإجابة الصحيحة موضحة بالأخضر: ') + (picked === correct ? '' : (['أ','ب','ج','د'][correct] + ') ' + box.dataset.ans));
+      }
+    }
+
     function renderAssessItems(items, prefix) {
       const obj = items.map((x, i) => ({x, i})).filter(e => e.x.qtype === 'موضوعي');
       const essay = items.map((x, i) => ({x, i})).filter(e => e.x.qtype !== 'موضوعي');
+      const letters = ['أ','ب','ج','د'];
       const card = (e, isEssay) => {
         const id = prefix + '-' + e.i;
+        if (!isEssay && e.x.mcq) {
+          const m = e.x.mcq;
+          return `
+          <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-700/40 border border-slate-200 dark:border-slate-600 space-y-2.5">
+            <p class="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 leading-relaxed whitespace-pre-line">س: ${escapeHtml(m.stem)}</p>
+            <div id="${id}-mc" data-ans="${escapeHtml(m.opts[m.correct])}" class="space-y-2">
+              ${m.opts.map((o, oi) => `
+                <button data-opt="${oi}" onclick="assessPick('${id}', ${oi}, ${m.correct})" class="w-full text-right px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 hover:border-emerald-400 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 leading-relaxed transition">
+                  <span class="font-extrabold text-blue-800 dark:text-blue-300">${letters[oi]} -</span> <span dir="auto">${escapeHtml(o)}</span>
+                </button>`).join('')}
+            </div>
+            <div id="${id}-fb" class="hidden p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-100 leading-relaxed"></div>
+          </div>
+        `;
+        }
         return `
           <div class="p-4 rounded-2xl bg-slate-50 dark:bg-slate-700/40 border border-slate-200 dark:border-slate-600 space-y-2.5">
             <p class="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 leading-relaxed whitespace-pre-line">س: ${escapeHtml(e.x.q)}</p>
-            ${isEssay ? `<textarea rows="3" placeholder="اكتب إجابتك هنا ثم قارنها بالإجابة النموذجية... (اختياري)" class="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-xs sm:text-sm text-slate-800 dark:text-slate-100 leading-relaxed"></textarea>` : ''}
+            ${isEssay ? `<textarea rows="3" placeholder="اكتب إجابتك هنا ثم قارنها بالإجابة النموذجية... (اختياري)" class="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-xs sm:text-sm text-slate-800 dark:text-slate-100 leading-relaxed"></textarea>` : `<div class="text-[11px] font-bold text-slate-500 dark:text-slate-400">ملف التقييمات لا يتضمن خيارات لهذا السؤال، لذلك تظهر إجابته فقط.</div>`}
             <div>
               <button onclick="document.getElementById('${id}').classList.toggle('hidden')" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold transition">
                 اعرض الإجابة${isEssay ? ' النموذجية' : ''}
@@ -2865,7 +2903,7 @@
       let html = '';
       if (obj.length) {
         html += `<div class="space-y-2.5">
-          <div class="text-xs sm:text-sm font-extrabold text-blue-900 dark:text-blue-300">أسئلة موضوعية — اختبر نفسك ثم اعرض الإجابة الصحيحة:</div>
+          <div class="text-xs sm:text-sm font-extrabold text-blue-900 dark:text-blue-300">أسئلة موضوعية (اختيار من متعدد) — اختر الإجابة:</div>
           ${obj.map(e => card(e, false)).join('')}
         </div>`;
       }
