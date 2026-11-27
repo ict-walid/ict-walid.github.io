@@ -2712,6 +2712,9 @@
         <button onclick="showT1Comprehensive()" class="w-full p-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-extrabold shadow-sm transition flex items-center justify-center gap-2">
           📚 الاختبار الشامل — الترم الأول
         </button>
+        <div class="grid grid-cols-2 gap-2">
+          ${[1,2,3,4].map(n => `<button onclick="showT1Exam(${n})" class="p-3 rounded-2xl ${appState.selectedLessonId === 't1-exam-' + n ? 'bg-blue-700' : 'bg-blue-600 hover:bg-blue-500'} text-white text-xs font-extrabold shadow-sm transition">📝 شامل ${n}</button>`).join('')}
+        </div>
       `;
 
       let currentLesson = null;
@@ -2729,6 +2732,10 @@
         currentLesson = currentChapter.lessons[0];
       }
 
+      if (/^t1-exam-[1-4]$/.test(appState.selectedLessonId) && typeof renderT1Exam === 'function') {
+        contentArea.innerHTML = renderT1Exam(parseInt(appState.selectedLessonId.slice(-1), 10));
+        return;
+      }
       if (appState.selectedLessonId === 't1-comp') {
         contentArea.innerHTML = renderT1Comprehensive();
         return;
