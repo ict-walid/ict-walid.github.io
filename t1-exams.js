@@ -4,7 +4,7 @@
  * الموضوعي: فقط الأسئلة التي لها خيارات حقيقية.
  *************************************************************************/
 const T1_EXAM_UNITS = {1:['1-1','1-2','1-3','1-4'],2:['2-1','2-2','2-3'],3:['3-1','3-2','3-3'],4:['4-1','4-2','4-3','4-4']};
-const T1_EXAM_UNIT_NAME = {1:'الوحدة الأولى',2:'الوحدة الثانية',3:'الوحدة الثالثة',4:'الوحدة الرابعة'};
+const T1_EXAM_UNIT_NAME = {1:'الوحدة الأولى',2:'الوحدة الثانية',3:'الوحدة الثالثة',4:'الوحدة الرابعة','term':'الترم الأول كامل'};
 window.__t1ex = window.__t1ex || {};
 
 function t1Norm(s) {
@@ -119,18 +119,18 @@ function renderT1Exam(u) {
     if (it.type === 'mcq') {
       const m = it.x.mcq;
       return `<div class="${cls}">
-        <div class="text-[11px] font-extrabold text-blue-800 dark:text-blue-300">${i + 1} • الدرس ${it.lid}</div>
+        <div class="text-[11px] font-extrabold text-blue-800 dark:text-blue-300">${i + 1} • ${u === 'term' ? 'الوحدة ' + it.lid.split('-')[0] + ' • ' : ''}الدرس ${it.lid}</div>
         <p class="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 leading-relaxed">${escapeHtml(m.stem)}</p>
         <div id="${it.id}-mc" class="space-y-2">${m.opts.map((o, oi) => `
-          <button data-opt="${oi}" onclick="examPick(${u}, ${i}, ${oi})" class="w-full text-right px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 leading-relaxed transition">
+          <button data-opt="${oi}" onclick="examPick('${u}', ${i}, ${oi})" class="w-full text-right px-3.5 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 leading-relaxed transition">
             <span class="font-extrabold text-blue-800 dark:text-blue-300">${letters[oi]} -</span> <span dir="auto">${escapeHtml(o)}</span></button>`).join('')}</div>
         <div id="${it.id}-fb" class="hidden p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-xs sm:text-sm font-extrabold text-slate-800 dark:text-slate-100 leading-relaxed"></div></div>`;
     }
     return `<div class="${cls}">
-        <div class="text-[11px] font-extrabold text-blue-800 dark:text-blue-300">${i + 1} • مقالي • الدرس ${it.lid}</div>
+        <div class="text-[11px] font-extrabold text-blue-800 dark:text-blue-300">${i + 1} • مقالي • ${u === 'term' ? 'الوحدة ' + it.lid.split('-')[0] + ' • ' : ''}الدرس ${it.lid}</div>
         <p class="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-100 leading-relaxed whitespace-pre-line">${escapeHtml(it.x.q)}</p>
         <textarea id="${it.id}-ta" rows="4" placeholder="اكتب إجابتك هنا..." class="w-full p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 text-xs sm:text-sm text-slate-800 dark:text-slate-100 leading-relaxed"></textarea>
-        <button id="${it.id}-bt" onclick="examCheckEssay(${u}, ${i})" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold transition">صحّح إجابتي واعرض النموذجية</button>
+        <button id="${it.id}-bt" onclick="examCheckEssay('${u}', ${i})" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold transition">صحّح إجابتي واعرض النموذجية</button>
         <div id="${it.id}-fb" class="hidden"></div></div>`;
   };
   const nm = ex.list.filter(x => x.type === 'mcq').length, ne = ex.list.length - nm;
@@ -138,20 +138,55 @@ function renderT1Exam(u) {
   return `<div class="bg-white dark:bg-slate-800 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-700 shadow-sm space-y-5 animate-fade-up">
     <div class="space-y-1.5 pb-4 border-b border-slate-100 dark:border-slate-700">
       <button onclick="t1ExamBack()" class="px-3.5 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-800 dark:text-slate-100 text-xs font-extrabold">→ رجوع لاختيار الاختبار</button>
-      <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">📝 شامل ${u} — ${T1_EXAM_UNIT_NAME[u]}</h2>
-      <p class="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300">${ex.list.length} سؤالًا: ${nm} موضوعي + ${ne} مقالي، من تقييمات دروس الوحدة (${Object.keys(per).map(k => k + ': ' + per[k]).join('، ')}). الأسئلة عشوائية ومرتبة من الأسهل للأصعب في كل قسم.</p>
+      <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white">${u === 'term' ? '🎓 اختبار شامل للترم الأول' : '📝 شامل ' + u + ' — ' + T1_EXAM_UNIT_NAME[u]}</h2>
+      <p class="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300">${u === 'term' ? ex.list.length + ' سؤالًا: ' + nm + ' اختياري + ' + ne + ' مقالي — 20 سؤالًا من كل وحدة من الوحدات الأربع (15 اختياري + 5 مقالي)، موزعة على الدروس (' + Object.keys(per).map(k => k + ': ' + per[k]).join('، ') + '). الأسئلة عشوائية ومرتبة من الأسهل للأصعب في كل قسم.' : ex.list.length + ' سؤالًا: ' + nm + ' موضوعي + ' + ne + ' مقالي، من تقييمات دروس الوحدة (' + Object.keys(per).map(k => k + ': ' + per[k]).join('، ') + '). الأسئلة عشوائية ومرتبة من الأسهل للأصعب في كل قسم.'}</p>
       <p class="text-[11px] font-bold text-slate-500 dark:text-slate-400">المقالي: تُحتسب الإجابة صحيحة إذا غطّت معظم المصطلحات الرئيسية للإجابة النموذجية (تقريبًا 60٪ فأكثر) أو تطابقت 90٪ تقريبًا معها. الإجابة النموذجية تظهر دائمًا. التصحيح تقريبي وليس بديلًا عن المدرس.</p>
-      <button onclick="showT1Exam(${u}, true)" class="px-3.5 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 text-xs font-extrabold">🔀 اختبار جديد (أسئلة مختلفة)</button>
+      <button onclick="${u === 'term' ? 'showT1TermExam(true)' : 'showT1Exam(' + u + ', true)'}" class="px-3.5 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 text-xs font-extrabold">🔀 اختبار جديد (أسئلة مختلفة)</button>
     </div>
     <div class="text-sm font-extrabold text-blue-900 dark:text-blue-300">القسم الأول: أسئلة موضوعية (${nm})</div>
     ${ex.list.map((it, i) => it.type === 'mcq' ? q(it, i) : '').join('')}
     <div class="text-sm font-extrabold text-blue-900 dark:text-blue-300 pt-2">القسم الثاني: أسئلة مقالية (${ne})</div>
     ${ex.list.map((it, i) => it.type === 'essay' ? q(it, i) : '').join('')}
-    <button onclick="examFinish(${u})" class="w-full p-3.5 rounded-2xl bg-blue-700 hover:bg-blue-600 text-white text-sm font-extrabold">إنهاء الاختبار وعرض النتيجة</button>
+    <button onclick="examFinish('${u}')" class="w-full p-3.5 rounded-2xl bg-blue-700 hover:bg-blue-600 text-white text-sm font-extrabold">إنهاء الاختبار وعرض النتيجة</button>
     <div id="exam-result" class="hidden p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 space-y-1"></div>
   </div>`;
 }
 
+
+/*************************************************************************
+ * اختبار شامل للترم الأول: 80 سؤالًا = 60 اختياري + 20 مقالي
+ * 20 سؤالًا من كل وحدة (15 اختياري + 5 مقالي)، موزعة على دروس الوحدة.
+ * كل الأسئلة مسحوبة من أسئلة التقييمات الرسمية (T1_ASSESS) دون أي إضافة.
+ *************************************************************************/
+function t1BuildTermExam() {
+  const mcq = [], essay = [];
+  const seenQ = new Set();
+  const uniq = x => { const k = x.q.replace(/[\s\u064B-\u0652؟?.،:]/g, ''); if (seenQ.has(k)) return false; seenQ.add(k); return true; };
+  [1, 2, 3, 4].forEach(u => {
+    const lessons = T1_EXAM_UNITS[u];
+    const nM = t1Split(15, lessons.length), nE = t1Split(5, lessons.length);
+    lessons.forEach((lid, i) => {
+      const items = T1_ASSESS[lid] || [];
+      const pm = items.filter(x => x.qtype === 'موضوعي' && x.mcq).filter(uniq);
+      const pe = items.filter(x => x.qtype !== 'موضوعي' && (x.a || '').trim()).filter(uniq);
+      t1ShuffleSample(pm, nM[i]).forEach(x => mcq.push({type: 'mcq', lid, x}));
+      t1ShuffleSample(pe, nE[i]).forEach(x => essay.push({type: 'essay', lid, x}));
+    });
+  });
+  mcq.sort((a, b) => t1Diff(a) - t1Diff(b));
+  essay.sort((a, b) => t1Diff(a) - t1Diff(b));
+  const list = mcq.concat(essay);
+  list.forEach((it, i) => it.id = 'exterm-' + i);
+  return {u: 'term', list, res: {}, finished: false};
+}
+
+function showT1TermExam(fresh) {
+  if (fresh || !window.__t1ex['term']) window.__t1ex['term'] = t1BuildTermExam();
+  appState.selectedLessonId = 't1-exam-term';
+  if (appState.activeTab !== 'lessons') switchTab('lessons');
+  renderLessonExplorer();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
 
 function t1ExamBack() {
   switchTab('practice');
