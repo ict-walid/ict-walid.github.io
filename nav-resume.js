@@ -320,7 +320,7 @@
     var f = window[name]; if (typeof f !== 'function') return;
     window[name] = function (rec) { var r = f.apply(this, arguments); try { localStorage.setItem(H, '1');
       if (name === 'applyStudentSession' && rec) { if (rec.username === 'mr_walid_preview') { localStorage.setItem('ict_sess_kind', 'preview'); } else if (rec.uid) { localStorage.setItem('ict_sess_kind', 'student:' + rec.uid); } }
-      else if (name === 'applyTeacherSession') localStorage.setItem('ict_sess_kind', 'teacher'); } catch (e) {} return r; };
+      else if (name === 'applyTeacherSession' && !appState.currentUser) localStorage.setItem('ict_sess_kind', 'teacher'); } catch (e) {} return r; };
   }
   mark('applyStudentSession'); mark('applyTeacherSession');
   var lo = window.logoutUser;
