@@ -378,9 +378,10 @@
     var on = false;
     try { on = !!(appState.currentUser && appState.currentUser.username === 'mr_walid_preview'); } catch (e) {}
     var home = false; try { home = appState.activeTab === 'home'; } catch (e) {}
-    btn.classList.toggle('on', on && !home);
+    btn.classList.remove('on');
+    if (!on) { if (hb && hb.parentNode) hb.parentNode.removeChild(hb); hb = null; return; }
     heroBtn();
-    if (hb) hb.style.display = (on && home) ? '' : 'none';
+    if (hb) hb.style.display = home ? '' : 'none';
   }
   var hb = null;
   function heroBtn() {
