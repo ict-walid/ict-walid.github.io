@@ -1,0 +1,142 @@
+/* ============================================================
+   طبقة الاحترافية في الواجهة (UI/UX pass)
+   نظام موحّد: لون أساسي واحد، تسلسل هرمي أوضح، بطاقات وأزرار
+   وجداول متسقة، وتحسينات قراءة عربية — فوق design-polish.css
+   ============================================================ */
+:root{
+  --ict-primary:#1d4ed8;
+  --ict-primary-deep:#1e40af;
+  --ict-accent:#0f766e;
+  --ict-ink:#0f172a;
+  --ict-muted:#475569;
+  --ict-card-border:#e2e8f0;
+  --ict-card-shadow:0 1px 2px rgba(15,23,42,.05),0 8px 24px rgba(15,23,42,.06);
+  --ict-card-shadow-hover:0 4px 8px rgba(15,23,42,.06),0 14px 34px rgba(15,23,42,.10);
+}
+html.dark{
+  --ict-ink:#f1f5f9;
+  --ict-muted:#94a3b8;
+  --ict-card-border:#334155;
+  --ict-card-shadow:0 1px 2px rgba(0,0,0,.35),0 8px 24px rgba(0,0,0,.30);
+  --ict-card-shadow-hover:0 4px 10px rgba(0,0,0,.4),0 14px 34px rgba(0,0,0,.4);
+}
+
+/* لون التحديد */
+::selection{background:#bfdbfe;color:#0f172a}
+html.dark ::selection{background:#1e40af;color:#f8fafc}
+
+/* ---------- البطاقات الترحيبية (Hero) ---------- */
+/* تدرّج أهدأ وأنظف بدل التدرّج الثلاثي المموّه */
+main div.bg-gradient-to-l.from-blue-950{
+  background:linear-gradient(150deg,#172554 0%,#1e3a8a 58%,#155e63 125%) !important;
+  border:1px solid rgba(255,255,255,.10) !important;
+  box-shadow:0 10px 30px rgba(15,23,42,.18) !important;
+}
+html.dark main div.bg-gradient-to-l.from-blue-950{
+  background:linear-gradient(150deg,#0b1330 0%,#16255c 60%,#0c3f3a 130%) !important;
+  box-shadow:0 10px 30px rgba(0,0,0,.5) !important;
+}
+/* عناوين الهيرو: وزن وتباعد أسطر مريح للعربية */
+#hero-welcome-heading, main div.bg-gradient-to-l.from-blue-950 h2{
+  letter-spacing:0 !important;
+  line-height:1.65 !important;
+  text-wrap:balance;
+}
+main div.bg-gradient-to-l.from-blue-950 p{line-height:2 !important}
+
+/* ---------- الأزرار: تدرّب هرمي موحّد ---------- */
+main button.bg-blue-700, main button.bg-blue-800,
+form button.bg-blue-700[type="submit"]{
+  background-color:var(--ict-primary) !important;
+  background-image:none !important;
+}
+main button.bg-blue-700:hover, main button.bg-blue-800:hover,
+form button.bg-blue-700[type="submit"]:hover{
+  background-color:var(--ict-primary-deep) !important;
+}
+
+/* ---------- البطاقات: حدود وظلال موحّدة + رفع خفيف عند التفاعل ---------- */
+main .rounded-2xl.border, main .rounded-3xl.border{
+  border-color:var(--ict-card-border) !important;
+}
+#curriculum-grid > div, #glossary-grid > div{
+  box-shadow:var(--ict-card-shadow) !important;
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease !important;
+}
+#curriculum-grid > div:hover, #glossary-grid > div:hover{
+  transform:translateY(-2px);
+  box-shadow:var(--ict-card-shadow-hover) !important;
+  border-color:#93c5fd !important;
+}
+html.dark #curriculum-grid > div:hover, html.dark #glossary-grid > div:hover{
+  border-color:#3b82f6 !important;
+}
+/* زر «ابدأ» داخل بطاقات الفصول: اتساق بصري */
+#curriculum-grid button{border-radius:.875rem !important}
+
+/* ---------- تبويبا الترم: مقسّم موحّد (Segmented control) ---------- */
+div:has(> #term-btn-1):has(> #term-btn-2){
+  background:#f1f5f9;
+  border:1px solid var(--ict-card-border);
+  border-radius:1.25rem;
+  padding:.375rem;
+  display:flex;
+  gap:.375rem;
+}
+html.dark div:has(> #term-btn-1):has(> #term-btn-2){background:#1e293b}
+#term-btn-1, #term-btn-2{
+  border-width:0 !important;
+  border-radius:.9rem !important;
+  box-shadow:none !important;
+}
+#term-btn-1.bg-blue-700, #term-btn-2.bg-blue-700{
+  background-color:var(--ict-primary) !important;
+  box-shadow:0 2px 8px rgba(29,78,216,.35) !important;
+}
+
+/* ---------- الجداول داخل الدروس: رأس واضح وصفوف مريحة ---------- */
+#lesson-content-area table, #section-term2 table{border-collapse:separate !important;border-spacing:0}
+#lesson-content-area th, #section-term2 th{
+  background:#eff6ff !important;
+  color:#1e3a8a !important;
+  border-color:#dbeafe !important;
+  font-weight:800 !important;
+}
+html.dark #lesson-content-area th, html.dark #section-term2 th{
+  background:#1e293b !important;color:#bfdbfe !important;border-color:#334155 !important;
+}
+#lesson-content-area td, #section-term2 td{border-color:#e2e8f0 !important}
+html.dark #lesson-content-area td, html.dark #section-term2 td{border-color:#334155 !important}
+#lesson-content-area tbody tr:nth-child(even) td, #section-term2 tbody tr:nth-child(even) td{background:#f8fafc}
+html.dark #lesson-content-area tbody tr:nth-child(even) td, html.dark #section-term2 tbody tr:nth-child(even) td{background:rgba(30,41,59,.5)}
+
+/* ---------- حقول الإدخال: حدود وتركيز موحّدان ---------- */
+main input, main select, main textarea{
+  border-color:#cbd5e1 !important;
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+main input:focus, main select:focus, main textarea:focus{
+  border-color:var(--ict-primary) !important;
+  box-shadow:0 0 0 3px rgba(29,78,216,.15) !important;
+  outline:none !important;
+}
+html.dark main input:focus, html.dark main select:focus, html.dark main textarea:focus{
+  border-color:#60a5fa !important;
+  box-shadow:0 0 0 3px rgba(96,165,250,.2) !important;
+}
+
+/* ---------- شريط التنقل العلوي ---------- */
+header .nav-btn{border-radius:.65rem !important}
+
+/* ---------- شريط تمرير أنحف (ديسكتوب) ---------- */
+@media (min-width:1024px){
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:8px;border:2px solid #f8fafc}
+  html.dark ::-webkit-scrollbar-thumb{background:#475569;border-color:#0f172a}
+}
+
+/* ---------- موبايل: مسافات وهيرو ---------- */
+@media (max-width:640px){
+  main div.bg-gradient-to-l.from-blue-950{padding:1.375rem !important}
+  #hero-welcome-heading, main div.bg-gradient-to-l.from-blue-950 h2{font-size:1.25rem !important;line-height:1.7 !important}
+}
